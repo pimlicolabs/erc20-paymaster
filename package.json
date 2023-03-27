@@ -1,0 +1,22 @@
+{
+  "name": "pimlico-erc20paymaster-contracts",
+  "dependencies": {
+    "@account-abstraction/contracts": "^0.5.0",
+    "@openzeppelin/contracts": "^4.8.2",
+    "hardhat": "^2.13.0"
+  },
+  "devDependencies": {
+    "@nomiclabs/hardhat-ethers": "^2.2.2",
+    "@nomiclabs/hardhat-waffle": "^2.0.5",
+    "@typechain/ethers-v5": "^10.2.0",
+    "@typechain/hardhat": "^6.1.5",
+    "@types/chai": "^4.3.4",
+    "@types/mocha": "^10.0.1",
+    "@types/node": "^18.15.10",
+    "chai": "^4.3.7",
+    "ethereum-waffle": "^4.0.10",
+    "ts-node": "^10.9.1",
+    "typechain": "^8.1.1",
+    "typescript": "^5.0.2"
+  }
+}
