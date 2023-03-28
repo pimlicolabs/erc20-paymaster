@@ -32,13 +32,14 @@ import {
   getAccountAddress
 } from './testutils'
 import { fillAndSign } from './UserOp'
-import { hexConcat, parseEther } from 'ethers/lib/utils'
+import { hexConcat, parseEther, hexZeroPad } from 'ethers/lib/utils'
 import { UserOperation } from './UserOperation'
 import { hexValue } from '@ethersproject/bytes'
 
 describe('EntryPoint with paymaster', function () {
   let entryPoint: EntryPoint
   let accountOwner: Wallet
+  let priceSigner : Wallet
   const ethersSigner = ethers.provider.getSigner()
   let account: SimpleAccount
   const beneficiaryAddress = '0x'.padEnd(42, '1')
@@ -59,6 +60,7 @@ describe('EntryPoint with paymaster', function () {
     factory = await new SimpleAccountFactory__factory(ethersSigner).deploy(entryPoint.address)
 
     accountOwner = createAccountOwner();
+    priceSigner = createAccountOwner();
     ({ proxy: account } = await createAccount(ethersSigner, await accountOwner.getAddress(), entryPoint.address, factory))
     await fund(account)
   })
@@ -68,7 +70,7 @@ describe('EntryPoint with paymaster', function () {
     let token: TestERC20
     before(async () => {
       token = await new TestERC20__factory(ethersSigner).deploy()
-      paymaster = await new ERC20Paymaster__factory(ethersSigner).deploy(token.address, entryPoint.address)
+      paymaster = await new ERC20Paymaster__factory(ethersSigner).deploy(token.address, entryPoint.address, priceSigner.address)
       // await token.transfer(account.address, await token.balanceOf(await ethersSigner.getAddress()));
       // await token.sudoApprove(account.address, paymaster.address, ethers.constants.MaxUint256);
       await entryPoint.depositTo(paymaster.address, { value: parseEther('1') })
@@ -77,14 +79,39 @@ describe('EntryPoint with paymaster', function () {
 
     describe('#handleOps', () => {
       let calldata: string
+      let priceData: string
       before(async () => {
         calldata = await account.populateTransaction.execute(accountOwner.address, 0, "0x").then(tx => tx.data!)
-        await paymaster.setPriceOfEth(ethers.utils.parseEther("1"));
+        const sig = await priceSigner._signTypedData({
+          name: 'ERC20Paymaster',
+          version: '0.0.1',
+          chainId: 31337,
+          verifyingContract: paymaster.address,
+        },{
+          PaymasterPrice: [
+            { name: 'price', type: 'uint160' },
+            { name: 'signedAt', type: 'uint48'},
+            { name: 'validUntil', type: 'uint48' },
+          ]
+        }, {
+          price: "1000000000000",
+          signedAt: 0,
+          validUntil: "0xffffffffffff"
+        })
+
+        priceData = hexConcat([
+          paymaster.address,
+          hexZeroPad(ethers.constants.MaxUint256.toHexString(),32),
+          hexZeroPad(ethers.BigNumber.from("1000000000000").toHexString(), 20),
+          hexZeroPad("0x00", 6),
+          hexZeroPad("0xffffffffffff", 6),
+          sig
+        ])
       })
       it('paymaster should reject if account doesn\'t have tokens', async () => {
         const op = await fillAndSign({
           sender: account.address,
-          paymasterAndData: hexConcat([paymaster.address, ethers.constants.MaxUint256.toHexString()]),
+          paymasterAndData: priceData,
           callData: calldata
         }, accountOwner, entryPoint)
         await expect(entryPoint.callStatic.handleOps([op], beneficiaryAddress, {
@@ -100,7 +127,7 @@ describe('EntryPoint with paymaster', function () {
 
         const op = await fillAndSign({
           sender: account.address,
-          paymasterAndData: hexConcat([paymaster.address, ethers.constants.MaxUint256.toHexString()]),
+          paymasterAndData: priceData,
           callData: calldata
         }, accountOwner, entryPoint)
         await entryPoint.callStatic.handleOps([op], beneficiaryAddress, {
