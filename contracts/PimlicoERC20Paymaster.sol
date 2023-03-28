@@ -8,7 +8,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 import "hardhat/console.sol";
 
-contract ERC20Paymaster is BasePaymaster, EIP712 {
+contract PimlicoERC20Paymaster is BasePaymaster, EIP712 {
     IERC20 immutable token;
 
     uint256 public constant denominator = 1e18;
@@ -17,9 +17,7 @@ contract ERC20Paymaster is BasePaymaster, EIP712 {
 
     address public priceSigner;
 
-    uint48 public emergencyPriceUntil;
-    uint48 public emergencyPriceAt;
-    uint160 public emergencyPriceValue;
+    uint160 public emergencyPrice;
 
     constructor(IERC20 _token, IEntryPoint _entryPoint, address _priceSigner) BasePaymaster(_entryPoint) EIP712("ERC20Paymaster", "0.0.1") {
         token = _token;
@@ -34,10 +32,8 @@ contract ERC20Paymaster is BasePaymaster, EIP712 {
         token.transfer(to, amount);
     }
 
-    function emergencyPrice(uint48 _duration, uint160 price) external onlyOwner {
-        emergencyPriceUntil = uint48(block.timestamp) + _duration;
-        emergencyPriceAt = uint48(block.timestamp);
-        emergencyPriceValue = price;
+    function setEmergencyPrice(uint160 price) external onlyOwner {
+        emergencyPrice = price;
     }
 
     function _validatePaymasterUserOp(UserOperation calldata userOp, bytes32, uint256 requiredPreFund) internal override returns (bytes memory context, uint256 validationData) {
@@ -54,7 +50,7 @@ contract ERC20Paymaster is BasePaymaster, EIP712 {
         uint160 signedPrice = uint160(bytes20(paymasterAndData[52:72]));
         uint48 signedAt = uint48(bytes6(paymasterAndData[72:78]));
         uint48 validUntil = uint48(bytes6(paymasterAndData[78:84]));
-        if(emergencyPriceUntil > signedAt) return (true, emergencyPriceUntil, emergencyPriceAt, emergencyPriceValue);
+        if(emergencyPrice > 0) return (true, 0, 0, emergencyPrice);
         bytes calldata signature = paymasterAndData[84:];
         bytes32 digest = _hashTypedDataV4(keccak256(abi.encode(
             keccak256("PaymasterPrice(uint160 price,uint48 signedAt,uint48 validUntil)"),

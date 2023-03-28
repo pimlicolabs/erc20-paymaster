@@ -10,8 +10,8 @@ import {
 import {
   TestCounter,
   TestCounter__factory,
-  ERC20Paymaster,
-  ERC20Paymaster__factory,
+  PimlicoERC20Paymaster,
+  PimlicoERC20Paymaster__factory,
   TestERC20__factory,
   TestERC20
 } from "../typechain-types";
@@ -66,11 +66,11 @@ describe('EntryPoint with paymaster', function () {
   })
 
   describe('using TokenPaymaster (account pays in paymaster tokens)', () => {
-    let paymaster: ERC20Paymaster
+    let paymaster: PimlicoERC20Paymaster
     let token: TestERC20
     before(async () => {
       token = await new TestERC20__factory(ethersSigner).deploy()
-      paymaster = await new ERC20Paymaster__factory(ethersSigner).deploy(token.address, entryPoint.address, priceSigner.address)
+      paymaster = await new PimlicoERC20Paymaster__factory(ethersSigner).deploy(token.address, entryPoint.address, priceSigner.address)
       // await token.transfer(account.address, await token.balanceOf(await ethersSigner.getAddress()));
       // await token.sudoApprove(account.address, paymaster.address, ethers.constants.MaxUint256);
       await entryPoint.depositTo(paymaster.address, { value: parseEther('1') })
