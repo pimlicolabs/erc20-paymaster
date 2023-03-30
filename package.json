@@ -3,7 +3,8 @@
   "dependencies": {
     "@account-abstraction/contracts": "^0.5.0",
     "@openzeppelin/contracts": "^4.8.2",
-    "hardhat": "^2.13.0"
+    "hardhat": "^2.13.0",
+    "solidity-coverage": "^0.8.2"
   },
   "devDependencies": {
     "@nomiclabs/hardhat-ethers": "^2.2.2",
