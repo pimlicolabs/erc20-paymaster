@@ -4,7 +4,7 @@ import { PimlicoERC20Paymaster } from '../typechain-types';
 import { hexConcat, parseEther, hexZeroPad } from 'ethers/lib/utils'
 import  axios from 'axios';
 
-interface SignedPriceData {
+export interface SignedPriceData {
     paymasterAddress : string,
     chainId : number,
     price: BigNumberish,
@@ -33,13 +33,18 @@ interface CMCQuote {
 }
 
 export class ERC20Paymaster {
+
+    sigValidPeriod : number;
+
     constructor(
         readonly provider: ethers.providers.JsonRpcProvider,
         readonly erc20Paymaster : PimlicoERC20Paymaster,
         readonly signer : Signer,
         readonly cmcAPIKey = API_KEY,
         readonly cmcId = 1027, // 1027 represents Ethereum
+        sigValidPeriod? : number
     ) {
+        this.sigValidPeriod = sigValidPeriod || 5 * 60; // 5 minutes default
     }
     
     async getSignedPriceData() : Promise<SignedPriceData> {
@@ -47,7 +52,7 @@ export class ERC20Paymaster {
         const chainId = (await this.provider.getNetwork()).chainId
         const price = await this.getPrice();
         const signedAt = Math.floor(Date.now() / 1000)
-        const validUntil = signedAt + 60 * 60 * 24 * 30 // todo this should be configurable
+        const validUntil = signedAt + this.sigValidPeriod
         const signature = await this.signer._signTypedData({
             name: 'PimlicoERC20Paymaster',
             version: '0.0.1',
@@ -73,7 +78,12 @@ export class ERC20Paymaster {
     }
 
     async queryCMC() : Promise<CMCQuote>{
-        const response = await axios.get("https://pro-api.coinmarketcap.com/v2/cryptocurrency/quotes/latest?CMC_PRO_API_KEY=" + this.cmcAPIKey + "&id="+this.cmcId)
+        const response = await axios.get(
+            "https://pro-api.coinmarketcap.com/v2/cryptocurrency/quotes/latest?id="+this.cmcId,{
+                headers: {
+                    'X-CMC_PRO_API_KEY': this.cmcAPIKey,
+                }
+            })
         return response.data.data[this.cmcId].quote.USD;
     }
 }
@@ -85,15 +95,6 @@ export function encodePaymasterData(signedPriceData : SignedPriceData, maxCost :
     const encodedValidUntil = hexZeroPad(BigNumber.from(validUntil).toHexString(), 6)
     const encodedMaxCost = hexZeroPad(BigNumber.from(maxCost).toHexString(), 32)
     const encodedSignature = signature
-
-    // priceData = hexConcat([
-    //     paymaster.address,
-    //     hexZeroPad(ethers.constants.MaxUint256.toHexString(),32),
-    //     hexZeroPad(ethers.BigNumber.from("1000000000000").toHexString(), 20),
-    //     hexZeroPad("0x00", 6),
-    //     hexZeroPad("0xffffffffffff", 6),
-    //     sig
-    //   ])
 
     const encodedData = hexConcat([
         paymasterAddress,

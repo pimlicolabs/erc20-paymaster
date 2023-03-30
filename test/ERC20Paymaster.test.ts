@@ -1,4 +1,4 @@
-import { Wallet } from 'ethers'
+import { Wallet, BigNumber } from 'ethers'
 import { ethers } from 'hardhat'
 import { expect } from 'chai'
 import {
@@ -8,34 +8,22 @@ import {
   SimpleAccountFactory__factory
 } from '@account-abstraction/contracts/dist/types'
 import {
-  TestCounter,
-  TestCounter__factory,
   PimlicoERC20Paymaster,
   PimlicoERC20Paymaster__factory,
   TestERC20__factory,
   TestERC20
 } from "../typechain-types";
 import {
-  AddressZero,
   createAccountOwner,
   fund,
-  getBalance,
-  getTokenBalance,
-  rethrow,
   checkForGeth,
-  calcGasUsage,
   deployEntryPoint,
-  checkForBannedOps,
-  createAddress,
-  ONE_ETH,
   createAccount,
-  getAccountAddress
 } from './testutils'
 import { fillAndSign } from './UserOp'
-import { hexConcat, parseEther, hexZeroPad } from 'ethers/lib/utils'
-import { UserOperation } from './UserOperation'
+import { hexConcat, parseEther } from 'ethers/lib/utils'
 import { hexValue } from '@ethersproject/bytes'
-import { encodePaymasterData, ERC20Paymaster } from '../src/handlePaymastermethod';
+import { encodePaymasterData, ERC20Paymaster, SignedPriceData } from '../src/ERC20Paymaster';
 
 describe('EntryPoint with paymaster', function () {
   let entryPoint: EntryPoint
@@ -46,7 +34,7 @@ describe('EntryPoint with paymaster', function () {
   const beneficiaryAddress = '0x'.padEnd(42, '1')
   let factory: SimpleAccountFactory
 
-  function getAccountDeployer (entryPoint: string, accountOwner: string, _salt: number = 0): string {
+  function getAccountDeployer(accountOwner: string, _salt: number = 0): string {
     return hexConcat([
       factory.address,
       hexValue(factory.interface.encodeFunctionData('createAccount', [accountOwner, _salt])!)
@@ -81,6 +69,7 @@ describe('EntryPoint with paymaster', function () {
     describe('#handleOps', () => {
       let calldata: string
       let priceData: string
+      let signedData : SignedPriceData
       before(async () => {
         calldata = await account.populateTransaction.execute(accountOwner.address, 0, "0x").then(tx => tx.data!)
         const api = new ERC20Paymaster(
@@ -88,8 +77,11 @@ describe('EntryPoint with paymaster', function () {
           paymaster,
           priceSigner
         )
-        const sig = await api.getSignedPriceData();
-        priceData = encodePaymasterData(sig, ethers.constants.MaxUint256);
+        signedData = await api.getSignedPriceData();
+        priceData = encodePaymasterData(signedData, ethers.constants.MaxUint256);
+      })
+      it("sig" , async () => {
+        expect(signedData.validUntil).to.equal(BigNumber.from(signedData.signedAt).toNumber() + 5* 60);
       })
       it('paymaster should reject if account doesn\'t have tokens', async () => {
         const op = await fillAndSign({
