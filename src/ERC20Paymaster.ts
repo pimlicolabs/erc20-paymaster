@@ -40,6 +40,7 @@ export class ERC20Paymaster {
         readonly provider: ethers.providers.JsonRpcProvider,
         readonly erc20Paymaster : PimlicoERC20Paymaster,
         readonly signer : Signer,
+        readonly owner = signer,
         readonly cmcAPIKey = API_KEY,
         readonly cmcId = 1027, // 1027 represents Ethereum
         sigValidPeriod? : number
@@ -72,9 +73,22 @@ export class ERC20Paymaster {
         return { paymasterAddress, chainId, price, signedAt, validUntil, signature }
     }
 
+    async setEmergencyPrice(price : BigNumberish) : Promise<ethers.ContractTransaction> {
+        return this.erc20Paymaster.connect(this.owner).setEmergencyPrice(price)
+    }
+
+    async stopEmergencyPrice() : Promise<ethers.ContractTransaction> {
+        return this.erc20Paymaster.connect(this.owner).setEmergencyPrice(0)
+    }
+
     async getPrice() : Promise<BigNumberish> {
         const response = await this.queryCMC();
         return BigNumber.from(ethers.utils.parseEther(response.price.toString()));
+    }
+
+    async getVolatility() : Promise<BigNumberish> {
+        const response = await this.queryCMC();
+        return response.percent_change_24h;
     }
 
     async queryCMC() : Promise<CMCQuote>{
@@ -89,7 +103,7 @@ export class ERC20Paymaster {
 }
 
 export function encodePaymasterData(signedPriceData : SignedPriceData, maxCost : BigNumberish) : string {
-    const { paymasterAddress, chainId, price, signedAt, validUntil, signature } = signedPriceData
+    const { paymasterAddress, price, signedAt, validUntil, signature } = signedPriceData
     const encodedPrice = hexZeroPad(BigNumber.from(price).toHexString(), 20)
     const encodedSignedAt = hexZeroPad(BigNumber.from(signedAt).toHexString(), 6)
     const encodedValidUntil = hexZeroPad(BigNumber.from(validUntil).toHexString(), 6)
