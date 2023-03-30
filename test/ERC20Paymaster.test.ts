@@ -83,7 +83,7 @@ describe('EntryPoint with paymaster', function () {
       before(async () => {
         calldata = await account.populateTransaction.execute(accountOwner.address, 0, "0x").then(tx => tx.data!)
         const sig = await priceSigner._signTypedData({
-          name: 'ERC20Paymaster',
+          name: 'PimlicoERC20Paymaster',
           version: '0.0.1',
           chainId: 31337,
           verifyingContract: paymaster.address,

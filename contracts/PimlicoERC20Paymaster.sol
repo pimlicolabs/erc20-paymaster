@@ -19,7 +19,7 @@ contract PimlicoERC20Paymaster is BasePaymaster, EIP712 {
 
     uint160 public emergencyPrice;
 
-    constructor(IERC20 _token, IEntryPoint _entryPoint, address _priceSigner) BasePaymaster(_entryPoint) EIP712("ERC20Paymaster", "0.0.1") {
+    constructor(IERC20 _token, IEntryPoint _entryPoint, address _priceSigner) BasePaymaster(_entryPoint) EIP712("PimlicoERC20Paymaster", "0.0.1") {
         token = _token;
         priceSigner = _priceSigner;
     }
