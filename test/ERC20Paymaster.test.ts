@@ -35,6 +35,7 @@ import { fillAndSign } from './UserOp'
 import { hexConcat, parseEther, hexZeroPad } from 'ethers/lib/utils'
 import { UserOperation } from './UserOperation'
 import { hexValue } from '@ethersproject/bytes'
+import { encodePaymasterData, ERC20Paymaster } from '../src/handlePaymastermethod';
 
 describe('EntryPoint with paymaster', function () {
   let entryPoint: EntryPoint
@@ -73,7 +74,7 @@ describe('EntryPoint with paymaster', function () {
       paymaster = await new PimlicoERC20Paymaster__factory(ethersSigner).deploy(token.address, entryPoint.address, priceSigner.address)
       // await token.transfer(account.address, await token.balanceOf(await ethersSigner.getAddress()));
       // await token.sudoApprove(account.address, paymaster.address, ethers.constants.MaxUint256);
-      await entryPoint.depositTo(paymaster.address, { value: parseEther('1') })
+      await entryPoint.depositTo(paymaster.address, { value: parseEther('1000') })
       await paymaster.addStake(1, { value: parseEther('2') })
     })
 
@@ -82,31 +83,13 @@ describe('EntryPoint with paymaster', function () {
       let priceData: string
       before(async () => {
         calldata = await account.populateTransaction.execute(accountOwner.address, 0, "0x").then(tx => tx.data!)
-        const sig = await priceSigner._signTypedData({
-          name: 'PimlicoERC20Paymaster',
-          version: '0.0.1',
-          chainId: 31337,
-          verifyingContract: paymaster.address,
-        },{
-          PaymasterPrice: [
-            { name: 'price', type: 'uint160' },
-            { name: 'signedAt', type: 'uint48'},
-            { name: 'validUntil', type: 'uint48' },
-          ]
-        }, {
-          price: "1000000000000",
-          signedAt: 0,
-          validUntil: "0xffffffffffff"
-        })
-
-        priceData = hexConcat([
-          paymaster.address,
-          hexZeroPad(ethers.constants.MaxUint256.toHexString(),32),
-          hexZeroPad(ethers.BigNumber.from("1000000000000").toHexString(), 20),
-          hexZeroPad("0x00", 6),
-          hexZeroPad("0xffffffffffff", 6),
-          sig
-        ])
+        const api = new ERC20Paymaster(
+          ethers.provider,
+          paymaster,
+          priceSigner
+        )
+        const sig = await api.getSignedPriceData();
+        priceData = encodePaymasterData(sig, ethers.constants.MaxUint256);
       })
       it('paymaster should reject if account doesn\'t have tokens', async () => {
         const op = await fillAndSign({
