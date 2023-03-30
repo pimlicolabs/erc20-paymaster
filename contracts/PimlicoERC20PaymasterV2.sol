@@ -21,6 +21,7 @@ contract PimlicoERC20PaymasterV2 is BasePaymaster {
 
     constructor(IERC20 _token, IEntryPoint _entryPoint, IOracle _oracle) BasePaymaster(_entryPoint) {
         token = _token;
+        oracle = _oracle;
     }
 
     function withdrawToken(address to, uint256 amount) external onlyOwner {
