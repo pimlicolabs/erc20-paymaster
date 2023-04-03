@@ -75,6 +75,7 @@ describe('EntryPoint with paymaster', function () {
       before(async () => {
         calldata = await account.populateTransaction.execute(accountOwner.address, 0, "0x").then(tx => tx.data!)
         priceData = hexConcat([paymaster.address]);
+        await token.sudoTransfer(account.address, await ethersSigner.getAddress());
       })
       it('paymaster should reject if account doesn\'t have tokens', async () => {
         const op = await fillAndSign({

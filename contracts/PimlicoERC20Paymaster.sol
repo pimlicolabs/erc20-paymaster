@@ -55,53 +55,58 @@ contract PimlicoERC20Paymaster is BasePaymaster {
     // 
     // prev + premium 
     function _validatePaymasterUserOp(UserOperation calldata userOp, bytes32, uint256 requiredPreFund) internal override returns (bytes memory context, uint256 validationData) {
+        uint256 gasPrev = gasleft();
         // uint256 userProvidedPrice = uint256(bytes32(userOp.paymasterAndData[20:52]));
         if(userOp.paymasterAndData.length == 20) {
             // no price provided, use prevPrice
             uint256 tokenAmount = requiredPreFund  * (denominator + pricePremium) / prevPrice;
             token.transferFrom(userOp.sender, address(this), tokenAmount);
-            context = abi.encodePacked(tokenAmount);
+            context = abi.encodePacked(tokenAmount, userOp.sender);
         } else if(userOp.paymasterAndData.length == 21) {
             // no price provided, and no refund
             uint256 tokenAmount = requiredPreFund  * (denominator + pricePremium) / prevPrice;
             token.transferFrom(userOp.sender, address(this), tokenAmount);
-            context = "";
+            context = hex"00";
         } else if(userOp.paymasterAndData.length == 52) {
             // price provided
             uint256 minPrice = uint256(bytes32(userOp.paymasterAndData[20:52]));
             require(minPrice <= prevPrice * denominator / (denominator + pricePremium), "price too low"); // since our price oracle uses usdc/eth, we should use prevPrice * denominator / (denominator + pricePremium)
             uint256 tokenAmount = requiredPreFund  * (denominator + pricePremium) / prevPrice;
             token.transferFrom(userOp.sender, address(this), tokenAmount);
-            context = abi.encodePacked(tokenAmount);
+            context = abi.encodePacked(tokenAmount, userOp.sender);
         } else if(userOp.paymasterAndData.length == 53) {
             // price provided, and no refund
             uint256 maxPrice = uint256(bytes32(userOp.paymasterAndData[20:52]));
             require(maxPrice >= prevPrice * (denominator - pricePremium) / denominator, "price too low");
             uint256 tokenAmount = requiredPreFund  * (denominator + pricePremium) / prevPrice;
             token.transferFrom(userOp.sender, address(this), tokenAmount);
-            context = "";
+            context = hex"00";
         } else {
             revert("invalid paymasterAndData length");
         }
         // no return here since validationData == 0 and we have context saved in memory
         validationData = 0;
+        console.log("gas used on verification", gasPrev - gasleft());
     }
 
     function _postOp(PostOpMode, bytes calldata context, uint256 actualGasCost) internal override {
+        uint256 gasPrev = gasleft();
         (, int256 price, , , ) = oracle.latestRoundData();
         // 2.5% price chage
         if(uint256(price) * denominator / prevPrice > denominator + updateThreshold || uint256(price) * denominator / prevPrice < denominator - updateThreshold){
-            console.log("update?");
             prevPrice = uint192(int192(price));
         }
+
         // refund tokens
-        if(context.length > 0) {
-            uint256 tokenAmount = abi.decode(context, (uint256));
+        if(context.length == 52) {
+            uint256 tokenAmount = uint256(bytes32(context[0:32]));
+            address sender = address(bytes20(context[32:52]));
             // refund tokens based on actual gas cost
-            uint256 actualTokenNeeded = actualGasCost * (10**(decimals + 6)) * (denominator + pricePremium) / (10**18 * prevPrice * denominator);
+            uint256 actualTokenNeeded = actualGasCost * (denominator + pricePremium) / (prevPrice );
             if(tokenAmount > actualTokenNeeded) {
-                token.transfer(msg.sender, tokenAmount - actualTokenNeeded);
+                token.transfer(sender, tokenAmount - actualTokenNeeded);
             } // else no refund
         }
+        console.log("gas used on postOp", gasPrev - gasleft());
     }
 }
