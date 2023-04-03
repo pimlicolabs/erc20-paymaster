@@ -32,7 +32,7 @@ contract PimlicoERC20Paymaster is BasePaymaster {
         token = _token;
         oracle = _oracle;
         pricePremium = 5e4; // 5%  1e6 = 100%
-        updateThreshold = 25e3; // 1%  1e6 = 100%
+        updateThreshold = 25e3; // 2.5%  1e6 = 100%
         decimals = _oracle.decimals();
     }
 
