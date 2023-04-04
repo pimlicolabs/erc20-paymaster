@@ -85,9 +85,8 @@ contract PimlicoERC20Paymaster is BasePaymaster {
         require(length & 30 == 0 , "invalid data length");
         bool refund = length % 2 == 0;
         uint256 tokenAmount = (requiredPreFund + (refund ? REFUND_POSTOP_COST : NO_REFUND_POSTOP_COST) * userOp.maxFeePerGas) * cachedMarkup / cachedPrice;
-        if(length > 31) {
-            uint256 maxTokenAmount = uint256(bytes32(userOp.paymasterAndData[20:52]));
-            require(tokenAmount <= maxTokenAmount, "token amount too high");
+        if(length > 2) {
+            require(tokenAmount <= uint256(bytes32(userOp.paymasterAndData[20:52])), "token amount too high");
         }
         token.transferFrom(userOp.sender, address(this), tokenAmount);
         context = refund ? abi.encodePacked(tokenAmount, userOp.sender) : bytes(hex"00");
