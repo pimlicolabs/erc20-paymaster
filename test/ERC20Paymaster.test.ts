@@ -69,167 +69,339 @@ describe('EntryPoint with paymaster', function () {
       await paymaster.addStake(1, { value: parseEther('2') })
     })
 
-    describe('#handleOps - refund, no price', () => {
-      let calldata: string
-      let priceData: string
-      before(async () => {
-        calldata = await account.populateTransaction.execute(accountOwner.address, 0, "0x").then(tx => tx.data!)
-        priceData = hexConcat([paymaster.address]);
-        await token.sudoTransfer(account.address, await ethersSigner.getAddress());
-      })
-      it('paymaster should reject if account doesn\'t have tokens', async () => {
-        const op = await fillAndSign({
-          sender: account.address,
-          paymasterAndData: priceData,
-          callData: calldata
-        }, accountOwner, entryPoint)
-        await expect(entryPoint.callStatic.handleOps([op], beneficiaryAddress, {
-          gasLimit: 1e7
-        })).to.revertedWith('FailedOp') // TODO : weird => cannot get AA32
-        await expect(entryPoint.handleOps([op], beneficiaryAddress, {
-          gasLimit: 1e7
-        })).to.revertedWith('') // TODO : weird
-      })
-      it('paymaster be able to sponsor tx', async () => {
-        await token.transfer(account.address, await token.balanceOf(await ethersSigner.getAddress()));
-        await token.sudoApprove(account.address, paymaster.address, ethers.constants.MaxUint256);
-
-        const op = await fillAndSign({
-          sender: account.address,
-          paymasterAndData: priceData,
-          callData: calldata
-        }, accountOwner, entryPoint)
-        await entryPoint.callStatic.handleOps([op], beneficiaryAddress, {
-          gasLimit: 1e7
+    describe('no price change',() => {
+      describe('#handleOps - refund, no price', () => {
+        let calldata: string
+        let priceData: string
+        before(async () => {
+          calldata = await account.populateTransaction.execute(accountOwner.address, 0, "0x").then(tx => tx.data!)
+          priceData = hexConcat([paymaster.address]);
+          await token.sudoTransfer(account.address, await ethersSigner.getAddress());
         })
-        const tx = await entryPoint.handleOps([op], beneficiaryAddress, {
-          gasLimit: 1e7
-        }).then(async tx => await tx.wait())
-        console.log("gas used", tx.gasUsed?.toString())
-      })
-    })
-
-    describe('#handleOps - no refund, no price', () => {
-      let calldata: string
-      let priceData: string
-      before(async () => {
-        calldata = await account.populateTransaction.execute(accountOwner.address, 0, "0x").then(tx => tx.data!)
-        priceData = hexConcat([paymaster.address, "0x00"]);
-        await token.sudoTransfer(account.address, await ethersSigner.getAddress());
-      })
-      it('paymaster should reject if account doesn\'t have tokens', async () => {
-        const op = await fillAndSign({
-          sender: account.address,
-          paymasterAndData: priceData,
-          callData: calldata
-        }, accountOwner, entryPoint)
-        await expect(entryPoint.callStatic.handleOps([op], beneficiaryAddress, {
-          gasLimit: 1e7
-        })).to.revertedWith('FailedOp') // TODO : weird => cannot get AA32
-        await expect(entryPoint.handleOps([op], beneficiaryAddress, {
-          gasLimit: 1e7
-        })).to.revertedWith('') // TODO : weird
-      })
-      it('paymaster be able to sponsor tx', async () => {
-        await token.transfer(account.address, await token.balanceOf(await ethersSigner.getAddress()));
-        await token.sudoApprove(account.address, paymaster.address, ethers.constants.MaxUint256);
-
-        const op = await fillAndSign({
-          sender: account.address,
-          paymasterAndData: priceData,
-          callData: calldata
-        }, accountOwner, entryPoint)
-        await entryPoint.callStatic.handleOps([op], beneficiaryAddress, {
-          gasLimit: 1e7
+        it('paymaster should reject if account doesn\'t have tokens', async () => {
+          const op = await fillAndSign({
+            sender: account.address,
+            paymasterAndData: priceData,
+            callData: calldata
+          }, accountOwner, entryPoint)
+          await expect(entryPoint.callStatic.handleOps([op], beneficiaryAddress, {
+            gasLimit: 1e7
+          })).to.revertedWith('FailedOp') // TODO : weird => cannot get AA32
+          await expect(entryPoint.handleOps([op], beneficiaryAddress, {
+            gasLimit: 1e7
+          })).to.revertedWith('') // TODO : weird
         })
-        const tx = await entryPoint.handleOps([op], beneficiaryAddress, {
-          gasLimit: 1e7
-        }).then(async tx => await tx.wait())
-        console.log("gas used", tx.gasUsed?.toString())
-      })
-    })
+        it('paymaster be able to sponsor tx', async () => {
+          await token.transfer(account.address, await token.balanceOf(await ethersSigner.getAddress()));
+          await token.sudoApprove(account.address, paymaster.address, ethers.constants.MaxUint256);
 
-    describe('#handleOps - refund, max price', () => {
-      let calldata: string
-      let priceData: string
-      before(async () => {
-        calldata = await account.populateTransaction.execute(accountOwner.address, 0, "0x").then(tx => tx.data!)
-        const price = await paymaster.prevPrice();
-        priceData = hexConcat([paymaster.address, hexZeroPad(price.mul(95).div(100).toHexString(), 32)]);
-        await token.sudoTransfer(account.address, await ethersSigner.getAddress());
-      })
-      it('paymaster should reject if account doesn\'t have tokens', async () => {
-        const op = await fillAndSign({
-          sender: account.address,
-          paymasterAndData: priceData,
-          callData: calldata
-        }, accountOwner, entryPoint)
-        await expect(entryPoint.callStatic.handleOps([op], beneficiaryAddress, {
-          gasLimit: 1e7
-        })).to.revertedWith('FailedOp') // TODO : weird => cannot get AA32
-        await expect(entryPoint.handleOps([op], beneficiaryAddress, {
-          gasLimit: 1e7
-        })).to.revertedWith('') // TODO : weird
-      })
-      it('paymaster be able to sponsor tx', async () => {
-        await token.transfer(account.address, await token.balanceOf(await ethersSigner.getAddress()));
-        await token.sudoApprove(account.address, paymaster.address, ethers.constants.MaxUint256);
-
-        const op = await fillAndSign({
-          sender: account.address,
-          paymasterAndData: priceData,
-          callData: calldata
-        }, accountOwner, entryPoint)
-        await entryPoint.callStatic.handleOps([op], beneficiaryAddress, {
-          gasLimit: 1e7
+          const op = await fillAndSign({
+            sender: account.address,
+            paymasterAndData: priceData,
+            callData: calldata
+          }, accountOwner, entryPoint)
+          await entryPoint.callStatic.handleOps([op], beneficiaryAddress, {
+            gasLimit: 1e7
+          })
+          const tx = await entryPoint.handleOps([op], beneficiaryAddress, {
+            gasLimit: 1e7
+          }).then(async tx => await tx.wait())
+          console.log("gas used", tx.gasUsed?.toString())
         })
-        const tx = await entryPoint.handleOps([op], beneficiaryAddress, {
-          gasLimit: 1e7
-        }).then(async tx => await tx.wait())
-        console.log("gas used", tx.gasUsed?.toString())
       })
-    })
 
-    describe('#handleOps - no refund, max price', () => {
-      let calldata: string
-      let priceData: string
-      before(async () => {
-        calldata = await account.populateTransaction.execute(accountOwner.address, 0, "0x").then(tx => tx.data!)
-        const price = await paymaster.prevPrice();
-        priceData = hexConcat([paymaster.address, hexZeroPad(price.mul(95).div(100).toHexString(), 32), "0x00"]);
-        await token.sudoTransfer(account.address, await ethersSigner.getAddress());
-      })
-      it('paymaster should reject if account doesn\'t have tokens', async () => {
-        const op = await fillAndSign({
-          sender: account.address,
-          paymasterAndData: priceData,
-          callData: calldata
-        }, accountOwner, entryPoint)
-        await expect(entryPoint.callStatic.handleOps([op], beneficiaryAddress, {
-          gasLimit: 1e7
-        })).to.revertedWith('FailedOp') // TODO : weird => cannot get AA32
-        await expect(entryPoint.handleOps([op], beneficiaryAddress, {
-          gasLimit: 1e7
-        })).to.revertedWith('') // TODO : weird
-      })
-      it('paymaster be able to sponsor tx', async () => {
-        await token.transfer(account.address, await token.balanceOf(await ethersSigner.getAddress()));
-        await token.sudoApprove(account.address, paymaster.address, ethers.constants.MaxUint256);
-
-        const op = await fillAndSign({
-          sender: account.address,
-          paymasterAndData: priceData,
-          callData: calldata
-        }, accountOwner, entryPoint)
-        await entryPoint.callStatic.handleOps([op], beneficiaryAddress, {
-          gasLimit: 1e7
+      describe('#handleOps - no refund, no price', () => {
+        let calldata: string
+        let priceData: string
+        before(async () => {
+          calldata = await account.populateTransaction.execute(accountOwner.address, 0, "0x").then(tx => tx.data!)
+          priceData = hexConcat([paymaster.address, "0x00"]);
+          await token.sudoTransfer(account.address, await ethersSigner.getAddress());
         })
-        const tx = await entryPoint.handleOps([op], beneficiaryAddress, {
-          gasLimit: 1e7
-        }).then(async tx => await tx.wait())
-        console.log("gas used", tx.gasUsed?.toString())
-      })
-    })
+        it('paymaster should reject if account doesn\'t have tokens', async () => {
+          const op = await fillAndSign({
+            sender: account.address,
+            paymasterAndData: priceData,
+            callData: calldata
+          }, accountOwner, entryPoint)
+          await expect(entryPoint.callStatic.handleOps([op], beneficiaryAddress, {
+            gasLimit: 1e7
+          })).to.revertedWith('FailedOp') // TODO : weird => cannot get AA32
+          await expect(entryPoint.handleOps([op], beneficiaryAddress, {
+            gasLimit: 1e7
+          })).to.revertedWith('') // TODO : weird
+        })
+        it('paymaster be able to sponsor tx', async () => {
+          await token.transfer(account.address, await token.balanceOf(await ethersSigner.getAddress()));
+          await token.sudoApprove(account.address, paymaster.address, ethers.constants.MaxUint256);
 
+          const op = await fillAndSign({
+            sender: account.address,
+            paymasterAndData: priceData,
+            callData: calldata
+          }, accountOwner, entryPoint)
+          await entryPoint.callStatic.handleOps([op], beneficiaryAddress, {
+            gasLimit: 1e7
+          })
+          const tx = await entryPoint.handleOps([op], beneficiaryAddress, {
+            gasLimit: 1e7
+          }).then(async tx => await tx.wait())
+          console.log("gas used", tx.gasUsed?.toString())
+        })
+      })
+
+      describe('#handleOps - refund, max price', () => {
+        let calldata: string
+        let priceData: string
+        before(async () => {
+          calldata = await account.populateTransaction.execute(accountOwner.address, 0, "0x").then(tx => tx.data!)
+          const price = await paymaster.previousPrice();
+          priceData = hexConcat([paymaster.address, hexZeroPad(price.mul(95).div(100).toHexString(), 32)]);
+          await token.sudoTransfer(account.address, await ethersSigner.getAddress());
+        })
+        it('paymaster should reject if account doesn\'t have tokens', async () => {
+          const op = await fillAndSign({
+            sender: account.address,
+            paymasterAndData: priceData,
+            callData: calldata
+          }, accountOwner, entryPoint)
+          await expect(entryPoint.callStatic.handleOps([op], beneficiaryAddress, {
+            gasLimit: 1e7
+          })).to.revertedWith('FailedOp') // TODO : weird => cannot get AA32
+          await expect(entryPoint.handleOps([op], beneficiaryAddress, {
+            gasLimit: 1e7
+          })).to.revertedWith('') // TODO : weird
+        })
+        it('paymaster be able to sponsor tx', async () => {
+          await token.transfer(account.address, await token.balanceOf(await ethersSigner.getAddress()));
+          await token.sudoApprove(account.address, paymaster.address, ethers.constants.MaxUint256);
+
+          const op = await fillAndSign({
+            sender: account.address,
+            paymasterAndData: priceData,
+            callData: calldata
+          }, accountOwner, entryPoint)
+          await entryPoint.callStatic.handleOps([op], beneficiaryAddress, {
+            gasLimit: 1e7
+          })
+          const tx = await entryPoint.handleOps([op], beneficiaryAddress, {
+            gasLimit: 1e7
+          }).then(async tx => await tx.wait())
+          console.log("gas used", tx.gasUsed?.toString())
+        })
+      })
+
+      describe('#handleOps - no refund, max price', () => {
+        let calldata: string
+        let priceData: string
+        before(async () => {
+          calldata = await account.populateTransaction.execute(accountOwner.address, 0, "0x").then(tx => tx.data!)
+          const price = await paymaster.previousPrice();
+          priceData = hexConcat([paymaster.address, hexZeroPad(price.mul(95).div(100).toHexString(), 32), "0x00"]);
+          await token.sudoTransfer(account.address, await ethersSigner.getAddress());
+        })
+        it('paymaster should reject if account doesn\'t have tokens', async () => {
+          const op = await fillAndSign({
+            sender: account.address,
+            paymasterAndData: priceData,
+            callData: calldata
+          }, accountOwner, entryPoint)
+          await expect(entryPoint.callStatic.handleOps([op], beneficiaryAddress, {
+            gasLimit: 1e7
+          })).to.revertedWith('FailedOp') // TODO : weird => cannot get AA32
+          await expect(entryPoint.handleOps([op], beneficiaryAddress, {
+            gasLimit: 1e7
+          })).to.revertedWith('') // TODO : weird
+        })
+        it('paymaster be able to sponsor tx', async () => {
+          await token.transfer(account.address, await token.balanceOf(await ethersSigner.getAddress()));
+          await token.sudoApprove(account.address, paymaster.address, ethers.constants.MaxUint256);
+
+          const op = await fillAndSign({
+            sender: account.address,
+            paymasterAndData: priceData,
+            callData: calldata
+          }, accountOwner, entryPoint)
+          await entryPoint.callStatic.handleOps([op], beneficiaryAddress, {
+            gasLimit: 1e7
+          })
+          const tx = await entryPoint.handleOps([op], beneficiaryAddress, {
+            gasLimit: 1e7
+          }).then(async tx => await tx.wait())
+          console.log("gas used", tx.gasUsed?.toString())
+        })
+      })
+    });
+    describe('with price change',() => {
+      describe('#handleOps - refund, no price', () => {
+        let calldata: string
+        let priceData: string
+        before(async () => {
+          calldata = await account.populateTransaction.execute(accountOwner.address, 0, "0x").then(tx => tx.data!)
+          priceData = hexConcat([paymaster.address]);
+          let priceOld = await paymaster.previousPrice();
+          await oracle.setPrice(priceOld.mul(103).div(100));
+          await token.sudoTransfer(account.address, await ethersSigner.getAddress());
+        })
+        it('paymaster should reject if account doesn\'t have tokens', async () => {
+          const op = await fillAndSign({
+            sender: account.address,
+            paymasterAndData: priceData,
+            callData: calldata
+          }, accountOwner, entryPoint)
+          await expect(entryPoint.callStatic.handleOps([op], beneficiaryAddress, {
+            gasLimit: 1e7
+          })).to.revertedWith('FailedOp') // TODO : weird => cannot get AA32
+          await expect(entryPoint.handleOps([op], beneficiaryAddress, {
+            gasLimit: 1e7
+          })).to.revertedWith('') // TODO : weird
+        })
+        it('paymaster be able to sponsor tx', async () => {
+          await token.transfer(account.address, await token.balanceOf(await ethersSigner.getAddress()));
+          await token.sudoApprove(account.address, paymaster.address, ethers.constants.MaxUint256);
+
+          const op = await fillAndSign({
+            sender: account.address,
+            paymasterAndData: priceData,
+            callData: calldata
+          }, accountOwner, entryPoint)
+          await entryPoint.callStatic.handleOps([op], beneficiaryAddress, {
+            gasLimit: 1e7
+          })
+          const tx = await entryPoint.handleOps([op], beneficiaryAddress, {
+            gasLimit: 1e7
+          }).then(async tx => await tx.wait())
+          console.log("gas used", tx.gasUsed?.toString())
+        })
+      })
+
+      describe('#handleOps - no refund, no price', () => {
+        let calldata: string
+        let priceData: string
+        before(async () => {
+          calldata = await account.populateTransaction.execute(accountOwner.address, 0, "0x").then(tx => tx.data!)
+          priceData = hexConcat([paymaster.address, "0x00"]);
+          let priceOld = await paymaster.previousPrice();
+          await oracle.setPrice(priceOld.mul(103).div(100));
+          await token.sudoTransfer(account.address, await ethersSigner.getAddress());
+        })
+        it('paymaster should reject if account doesn\'t have tokens', async () => {
+          const op = await fillAndSign({
+            sender: account.address,
+            paymasterAndData: priceData,
+            callData: calldata
+          }, accountOwner, entryPoint)
+          await expect(entryPoint.callStatic.handleOps([op], beneficiaryAddress, {
+            gasLimit: 1e7
+          })).to.revertedWith('FailedOp') // TODO : weird => cannot get AA32
+          await expect(entryPoint.handleOps([op], beneficiaryAddress, {
+            gasLimit: 1e7
+          })).to.revertedWith('') // TODO : weird
+        })
+        it('paymaster be able to sponsor tx', async () => {
+          await token.transfer(account.address, await token.balanceOf(await ethersSigner.getAddress()));
+          await token.sudoApprove(account.address, paymaster.address, ethers.constants.MaxUint256);
+
+          const op = await fillAndSign({
+            sender: account.address,
+            paymasterAndData: priceData,
+            callData: calldata
+          }, accountOwner, entryPoint)
+          await entryPoint.callStatic.handleOps([op], beneficiaryAddress, {
+            gasLimit: 1e7
+          })
+          const tx = await entryPoint.handleOps([op], beneficiaryAddress, {
+            gasLimit: 1e7
+          }).then(async tx => await tx.wait())
+          console.log("gas used", tx.gasUsed?.toString())
+        })
+      })
+
+      describe('#handleOps - refund, max price', () => {
+        let calldata: string
+        let priceData: string
+        before(async () => {
+          calldata = await account.populateTransaction.execute(accountOwner.address, 0, "0x").then(tx => tx.data!)
+          const price = await paymaster.previousPrice();
+          priceData = hexConcat([paymaster.address, hexZeroPad(price.mul(95).div(100).toHexString(), 32)]);
+          let priceOld = await paymaster.previousPrice();
+          await oracle.setPrice(priceOld.mul(103).div(100));
+          await token.sudoTransfer(account.address, await ethersSigner.getAddress());
+        })
+        it('paymaster should reject if account doesn\'t have tokens', async () => {
+          const op = await fillAndSign({
+            sender: account.address,
+            paymasterAndData: priceData,
+            callData: calldata
+          }, accountOwner, entryPoint)
+          await expect(entryPoint.callStatic.handleOps([op], beneficiaryAddress, {
+            gasLimit: 1e7
+          })).to.revertedWith('FailedOp') // TODO : weird => cannot get AA32
+          await expect(entryPoint.handleOps([op], beneficiaryAddress, {
+            gasLimit: 1e7
+          })).to.revertedWith('') // TODO : weird
+        })
+        it('paymaster be able to sponsor tx', async () => {
+          await token.transfer(account.address, await token.balanceOf(await ethersSigner.getAddress()));
+          await token.sudoApprove(account.address, paymaster.address, ethers.constants.MaxUint256);
+
+          const op = await fillAndSign({
+            sender: account.address,
+            paymasterAndData: priceData,
+            callData: calldata
+          }, accountOwner, entryPoint)
+          await entryPoint.callStatic.handleOps([op], beneficiaryAddress, {
+            gasLimit: 1e7
+          })
+          const tx = await entryPoint.handleOps([op], beneficiaryAddress, {
+            gasLimit: 1e7
+          }).then(async tx => await tx.wait())
+          console.log("gas used", tx.gasUsed?.toString())
+        })
+      })
+
+      describe('#handleOps - no refund, max price', () => {
+        let calldata: string
+        let priceData: string
+        before(async () => {
+          calldata = await account.populateTransaction.execute(accountOwner.address, 0, "0x").then(tx => tx.data!)
+          let priceOld = await paymaster.previousPrice();
+          await oracle.setPrice(priceOld.mul(103).div(100));
+          const price = await paymaster.previousPrice();
+          priceData = hexConcat([paymaster.address, hexZeroPad(price.mul(95).div(100).toHexString(), 32), "0x00"]);
+          await token.sudoTransfer(account.address, await ethersSigner.getAddress());
+        })
+        it('paymaster should reject if account doesn\'t have tokens', async () => {
+          const op = await fillAndSign({
+            sender: account.address,
+            paymasterAndData: priceData,
+            callData: calldata
+          }, accountOwner, entryPoint)
+          await expect(entryPoint.callStatic.handleOps([op], beneficiaryAddress, {
+            gasLimit: 1e7
+          })).to.revertedWith('FailedOp') // TODO : weird => cannot get AA32
+          await expect(entryPoint.handleOps([op], beneficiaryAddress, {
+            gasLimit: 1e7
+          })).to.revertedWith('') // TODO : weird
+        })
+        it('paymaster be able to sponsor tx', async () => {
+          await token.transfer(account.address, await token.balanceOf(await ethersSigner.getAddress()));
+          await token.sudoApprove(account.address, paymaster.address, ethers.constants.MaxUint256);
+
+          const op = await fillAndSign({
+            sender: account.address,
+            paymasterAndData: priceData,
+            callData: calldata
+          }, accountOwner, entryPoint)
+          await entryPoint.callStatic.handleOps([op], beneficiaryAddress, {
+            gasLimit: 1e7
+          })
+          const tx = await entryPoint.handleOps([op], beneficiaryAddress, {
+            gasLimit: 1e7
+          }).then(async tx => await tx.wait())
+          console.log("gas used", tx.gasUsed?.toString())
+        })
+      })
+    });
   })
 })

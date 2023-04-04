@@ -9,92 +9,137 @@ import "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 import "./IOracle.sol";
 import "hardhat/console.sol";
 
-contract PimlicoERC20Paymaster is BasePaymaster {
-    uint256 public constant denominator = 1e6;
 
-    uint256 public constant POSTOP_COST = 40000; // TODO i think this is too much since same storage slot will be used on postOp
+
+/// @title PimlicoERC20Paymaster
+/// @notice A Paymaster contract for the Pimlico network that handles ERC20 token payments for transaction fees.
+/// The contract supports refunding excess tokens if the actual gas cost is lower than the initially provided amount.
+/// It also allows updating price configuration and withdrawing tokens by the contract owner.
+/// The contract uses an Oracle to fetch the latest token prices.
+/// @dev Inherits from BasePaymaster and adheres to the UserOperation interface.
+contract PimlicoERC20Paymaster is BasePaymaster {
+    uint256 public constant priceDenominator = 1e6;
+
+    uint256 public constant REFUND_POSTOP_COST = 40000; // TODO i think this is too much since same storage slot will be used on postOp
+    
+    uint256 public constant NO_REFUND_POSTOP_COST = 20000; // TODO i think this is too much since same storage slot will be used on postOp
 
     IERC20 immutable token;
 
     IOracle public immutable oracle;
 
-    uint8 immutable decimals;
+    uint192 public previousPrice;
+    uint32 public priceMarkup;
+    uint32 public priceUpdateThreshold;
 
-    uint192 public prevPrice;
+    event ConfigUpdated(uint32 priceMarkup, uint32 updateThreshold);
 
-    uint32 public pricePremium;
-
-    uint32 public updateThreshold;
-
-    event PricePremiumChanged(uint32 pricePremium, uint32 updateThreshold);
-
+    /// @notice Initializes the PimlicoERC20Paymaster contract with the given parameters.
+    /// @param _token The ERC20 token used for transaction fee payments.
+    /// @param _entryPoint The EntryPoint contract used in the Account Abstraction infrastructure.
+    /// @param _oracle The Oracle contract used to fetch the latest token prices.
     constructor(IERC20 _token, IEntryPoint _entryPoint, IOracle _oracle) BasePaymaster(_entryPoint) {
         token = _token;
         oracle = _oracle;
-        pricePremium = 5e4; // 5%  1e6 = 100%
-        updateThreshold = 25e3; // 2.5%  1e6 = 100%
-        decimals = _oracle.decimals();
+        priceMarkup = 105e4; // 105%  1e6 = 100%
+        priceUpdateThreshold = 25e3; // 2.5%  1e6 = 100%
     }
 
-    function setPricePremium(uint32 _pricePremium, uint32 _updateThreshold) external onlyOwner {
-        require(_pricePremium <= 15e4, "price premium too high");
-        require(_updateThreshold <= _pricePremium, "update threshold too high");
-        pricePremium = _pricePremium;
-        updateThreshold = _updateThreshold;
-        emit PricePremiumChanged(_pricePremium, _updateThreshold);
+    /// @notice Updates the price markup and price update threshold configurations.
+    /// @param _priceMarkup The new price markup percentage (1e6 = 100%).
+    /// @param _updateThreshold The new price update threshold percentage (1e6 = 100%).
+    function updateConfig(uint32 _priceMarkup, uint32 _updateThreshold) external onlyOwner {
+        require(_priceMarkup <= 15e4, "price premium too high");
+        require(_priceMarkup >= 1e6, "price premium too low");
+        require(_updateThreshold <= _priceMarkup - 1e6, "update threshold too high");
+        priceMarkup = _priceMarkup;
+        priceUpdateThreshold = _updateThreshold;
+        emit ConfigUpdated(_priceMarkup, _updateThreshold);
     }
 
+    /// @notice Allows the contract owner to withdraw a specified amount of tokens from the contract.
+    /// @param to The address to transfer the tokens to.
+    /// @param amount The amount of tokens to transfer.
     function withdrawToken(address to, uint256 amount) external onlyOwner {
         token.transfer(to, amount);
     }
 
+    /// @notice Updates the token price by fetching the latest price from the Oracle.
     function updatePrice() external { // this is erc20/eth price ratio
         (, int256 answer, , , ) = oracle.latestRoundData();
-        prevPrice = uint192(int192(answer));
+        previousPrice = uint192(int192(answer));
     }
-    // 
-    // prev + premium 
-    function _validatePaymasterUserOp(UserOperation calldata userOp, bytes32, uint256 requiredPreFund) internal override returns (bytes memory context, uint256 validationData) {
+
+    /// @notice Validates a paymaster user operation and calculates the required token amount for the transaction.
+    /// @param userOp The user operation data.
+    /// @param requiredPreFund The amount of tokens required for pre-funding.
+    /// @return context The context containing the token amount and user sender address (if applicable).
+    /// @return validationResult A uint256 value indicating the result of the validation (always 0 in this implementation).
+    function _validatePaymasterUserOp(UserOperation calldata userOp, bytes32, uint256 requiredPreFund) internal override returns (bytes memory context, uint256 validationResult) {
         uint256 gasPrev = gasleft();
+        require(previousPrice > 0, "price not set");
+        unchecked {
+        // uint256 length = userOp.paymasterAndData.length - 20;
+        // require(length / 32 <= 1, "invalid data length");
+        // if(length >= 32) {
+        //     uint256 minPrice = uint256(bytes32(userOp.paymasterAndData[20:52]));
+        //     require(minPrice <= previousPrice * priceDenominator / priceMarkup, "price too low"); // since our price oracle uses usdc/eth, we should use prevPrice * denominator / (denominator + pricePremium)
+        // }
         // uint256 userProvidedPrice = uint256(bytes32(userOp.paymasterAndData[20:52]));
         if(userOp.paymasterAndData.length == 20) {
-            // no price provided, use prevPrice
-            uint256 tokenAmount = requiredPreFund  * (denominator + pricePremium) / prevPrice;
+            // no price provided, refund
+            uint256 tokenAmount = (requiredPreFund + REFUND_POSTOP_COST * userOp.maxFeePerGas) * priceMarkup / previousPrice;
             token.transferFrom(userOp.sender, address(this), tokenAmount);
             context = abi.encodePacked(tokenAmount, userOp.sender);
         } else if(userOp.paymasterAndData.length == 21) {
-            // no price provided, and no refund
-            uint256 tokenAmount = requiredPreFund  * (denominator + pricePremium) / prevPrice;
+            // no price provided, no refund
+            uint256 tokenAmount = (requiredPreFund + NO_REFUND_POSTOP_COST * userOp.maxFeePerGas) * priceMarkup / previousPrice;
             token.transferFrom(userOp.sender, address(this), tokenAmount);
             context = hex"00";
         } else if(userOp.paymasterAndData.length == 52) {
-            // price provided
+            uint192 storedPrice = previousPrice;
+            uint32 storedPricePremium = priceMarkup;
+            // price provided, refund
             uint256 minPrice = uint256(bytes32(userOp.paymasterAndData[20:52]));
-            require(minPrice <= prevPrice * denominator / (denominator + pricePremium), "price too low"); // since our price oracle uses usdc/eth, we should use prevPrice * denominator / (denominator + pricePremium)
-            uint256 tokenAmount = requiredPreFund  * (denominator + pricePremium) / prevPrice;
+            require(minPrice <= storedPrice * priceDenominator / storedPricePremium, "price too low"); // since our price oracle uses usdc/eth, we should use prevPrice * denominator / (denominator + pricePremium)
+            uint256 tokenAmount = (requiredPreFund + REFUND_POSTOP_COST * userOp.maxFeePerGas) * storedPricePremium / storedPrice;
             token.transferFrom(userOp.sender, address(this), tokenAmount);
             context = abi.encodePacked(tokenAmount, userOp.sender);
         } else if(userOp.paymasterAndData.length == 53) {
-            // price provided, and no refund
-            uint256 maxPrice = uint256(bytes32(userOp.paymasterAndData[20:52]));
-            require(maxPrice >= prevPrice * (denominator - pricePremium) / denominator, "price too low");
-            uint256 tokenAmount = requiredPreFund  * (denominator + pricePremium) / prevPrice;
+            uint192 storedPrice = previousPrice;
+            uint32 storedPricePremium = priceMarkup;
+            // price provided, no refund
+            uint256 minPrice = uint256(bytes32(userOp.paymasterAndData[20:52]));
+            require(minPrice <= storedPrice * priceDenominator / storedPricePremium, "price too low");
+            uint256 tokenAmount = (requiredPreFund + NO_REFUND_POSTOP_COST * userOp.maxFeePerGas) * storedPricePremium / storedPrice;
             token.transferFrom(userOp.sender, address(this), tokenAmount);
             context = hex"00";
         } else {
             revert("invalid paymasterAndData length");
         }
         // no return here since validationData == 0 and we have context saved in memory
-        validationData = 0;
+        validationResult = 0;
         console.log("gas used on verification", gasPrev - gasleft());
+        }
     }
 
-    function _postOp(PostOpMode, bytes calldata context, uint256 actualGasCost) internal override {
+    /// @notice Performs post-operation tasks, such as updating the token price and refunding excess tokens (if applicable).
+    /// @param mode The post-operation mode (either successful or reverted).
+    /// @param context The context containing the token amount and user sender address (if applicable).
+    /// @param actualGasCost The actual gas cost of the transaction.
+    function _postOp(PostOpMode mode, bytes calldata context, uint256 actualGasCost) internal override {
+        if(mode == PostOpMode.postOpReverted) {
+            return; // do nothing here to not revert the whole bundle and harm reputation
+        }
         uint256 gasPrev = gasleft();
         (, int256 price, , , ) = oracle.latestRoundData();
         // 2.5% price chage
-        if(uint256(price) * denominator / prevPrice > denominator + updateThreshold || uint256(price) * denominator / prevPrice < denominator - updateThreshold){
-            prevPrice = uint192(int192(price));
+        unchecked {
+        if(
+            uint256(price) * priceDenominator / previousPrice > priceDenominator + priceUpdateThreshold ||
+            uint256(price) * priceDenominator / previousPrice < priceDenominator - priceUpdateThreshold
+        ){
+            previousPrice = uint192(int192(price));
         }
 
         // refund tokens
@@ -102,11 +147,12 @@ contract PimlicoERC20Paymaster is BasePaymaster {
             uint256 tokenAmount = uint256(bytes32(context[0:32]));
             address sender = address(bytes20(context[32:52]));
             // refund tokens based on actual gas cost
-            uint256 actualTokenNeeded = actualGasCost * (denominator + pricePremium) / (prevPrice );
+            uint256 actualTokenNeeded = (actualGasCost + REFUND_POSTOP_COST * tx.gasprice ) * priceMarkup / uint192(int192(price)); // we use tx.gasprice here since we don't know the actual gas price used by the user
             if(tokenAmount > actualTokenNeeded) {
                 token.transfer(sender, tokenAmount - actualTokenNeeded);
             } // else no refund
         }
         console.log("gas used on postOp", gasPrev - gasleft());
+        }
     }
 }
