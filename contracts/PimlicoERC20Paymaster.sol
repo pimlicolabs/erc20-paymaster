@@ -77,50 +77,24 @@ contract PimlicoERC20Paymaster is BasePaymaster {
     /// @return validationResult A uint256 value indicating the result of the validation (always 0 in this implementation).
     function _validatePaymasterUserOp(UserOperation calldata userOp, bytes32, uint256 requiredPreFund) internal override returns (bytes memory context, uint256 validationResult) {
         uint256 gasPrev = gasleft();
-        require(previousPrice > 0, "price not set");
         unchecked {
-        // uint256 length = userOp.paymasterAndData.length - 20;
-        // require(length / 32 <= 1, "invalid data length");
-        // if(length >= 32) {
-        //     uint256 minPrice = uint256(bytes32(userOp.paymasterAndData[20:52]));
-        //     require(minPrice <= previousPrice * priceDenominator / priceMarkup, "price too low"); // since our price oracle uses usdc/eth, we should use prevPrice * denominator / (denominator + pricePremium)
-        // }
-        // uint256 userProvidedPrice = uint256(bytes32(userOp.paymasterAndData[20:52]));
-        if(userOp.paymasterAndData.length == 20) {
-            // no price provided, refund
-            uint256 tokenAmount = (requiredPreFund + REFUND_POSTOP_COST * userOp.maxFeePerGas) * priceMarkup / previousPrice;
-            token.transferFrom(userOp.sender, address(this), tokenAmount);
-            context = abi.encodePacked(tokenAmount, userOp.sender);
-        } else if(userOp.paymasterAndData.length == 21) {
-            // no price provided, no refund
-            uint256 tokenAmount = (requiredPreFund + NO_REFUND_POSTOP_COST * userOp.maxFeePerGas) * priceMarkup / previousPrice;
-            token.transferFrom(userOp.sender, address(this), tokenAmount);
-            context = hex"00";
-        } else if(userOp.paymasterAndData.length == 52) {
-            uint192 storedPrice = previousPrice;
-            uint32 storedPricePremium = priceMarkup;
-            // price provided, refund
-            uint256 minPrice = uint256(bytes32(userOp.paymasterAndData[20:52]));
-            require(minPrice <= storedPrice * priceDenominator / storedPricePremium, "price too low"); // since our price oracle uses usdc/eth, we should use prevPrice * denominator / (denominator + pricePremium)
-            uint256 tokenAmount = (requiredPreFund + REFUND_POSTOP_COST * userOp.maxFeePerGas) * storedPricePremium / storedPrice;
-            token.transferFrom(userOp.sender, address(this), tokenAmount);
-            context = abi.encodePacked(tokenAmount, userOp.sender);
-        } else if(userOp.paymasterAndData.length == 53) {
-            uint192 storedPrice = previousPrice;
-            uint32 storedPricePremium = priceMarkup;
-            // price provided, no refund
-            uint256 minPrice = uint256(bytes32(userOp.paymasterAndData[20:52]));
-            require(minPrice <= storedPrice * priceDenominator / storedPricePremium, "price too low");
-            uint256 tokenAmount = (requiredPreFund + NO_REFUND_POSTOP_COST * userOp.maxFeePerGas) * storedPricePremium / storedPrice;
-            token.transferFrom(userOp.sender, address(this), tokenAmount);
-            context = hex"00";
-        } else {
-            revert("invalid paymasterAndData length");
+        uint256 cachedPrice = previousPrice;
+        uint32 cachedMarkup = priceMarkup;
+        require(cachedPrice != 0, "price not set");
+        uint256 length = userOp.paymasterAndData.length - 20;
+        require(length < 34 && length % 32 < 2, "invalid data length");
+        bool refund = length % 2 == 0;
+        uint256 tokenAmount = (requiredPreFund + (refund ? REFUND_POSTOP_COST : NO_REFUND_POSTOP_COST) * userOp.maxFeePerGas) * cachedMarkup / cachedPrice;
+        if(length > 31) {
+            uint256 maxTokenAmount = uint256(bytes32(userOp.paymasterAndData[20:52]));
+            require(tokenAmount <= maxTokenAmount, "token amount too high");
         }
+        token.transferFrom(userOp.sender, address(this), tokenAmount);
+        context = refund ? abi.encodePacked(tokenAmount, userOp.sender) : bytes(hex"00");
         // no return here since validationData == 0 and we have context saved in memory
         validationResult = 0;
-        console.log("gas used on verification", gasPrev - gasleft());
         }
+        console.log("gas used on verification", gasPrev - gasleft());
     }
 
     /// @notice Performs post-operation tasks, such as updating the token price and refunding excess tokens (if applicable).
