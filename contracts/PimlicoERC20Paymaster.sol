@@ -82,7 +82,7 @@ contract PimlicoERC20Paymaster is BasePaymaster {
         uint32 cachedMarkup = priceMarkup;
         require(cachedPrice != 0, "price not set");
         uint256 length = userOp.paymasterAndData.length - 20;
-        require(length < 34 && length % 32 < 2, "invalid data length");
+        require(length & 30 == 0 , "invalid data length");
         bool refund = length % 2 == 0;
         uint256 tokenAmount = (requiredPreFund + (refund ? REFUND_POSTOP_COST : NO_REFUND_POSTOP_COST) * userOp.maxFeePerGas) * cachedMarkup / cachedPrice;
         if(length > 31) {

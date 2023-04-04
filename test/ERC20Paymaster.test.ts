@@ -197,7 +197,7 @@ describe('EntryPoint with paymaster', function () {
         before(async () => {
           calldata = await account.populateTransaction.execute(accountOwner.address, 0, "0x").then(tx => tx.data!)
           const price = await paymaster.previousPrice();
-          priceData = hexConcat([paymaster.address, hexZeroPad(ethers.constants.WeiPerEther.toHexString(), 32), "0x00"]);
+          priceData = hexConcat([paymaster.address, hexZeroPad(ethers.constants.WeiPerEther.mul(10).toHexString(), 32), "0x00"]);
           await token.sudoTransfer(account.address, await ethersSigner.getAddress());
         })
         it('paymaster should reject if account doesn\'t have tokens', async () => {
