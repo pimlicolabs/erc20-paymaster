@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: copyleft-next-0.3.1
+// SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.0;
 
 import "@account-abstraction/contracts/core/BasePaymaster.sol";
@@ -49,9 +49,8 @@ contract PimlicoERC20Paymaster is BasePaymaster {
     /// @param _priceMarkup The new price markup percentage (1e6 = 100%).
     /// @param _updateThreshold The new price update threshold percentage (1e6 = 100%).
     function updateConfig(uint32 _priceMarkup, uint32 _updateThreshold) external onlyOwner {
-        require(_priceMarkup <= 15e4, "price premium too high");
-        require(_priceMarkup >= 1e6, "price premium too low");
-        require(_updateThreshold <= _priceMarkup - 1e6, "update threshold too high");
+        require(_priceMarkup <= 115e4, "price markup too high");
+        require(_priceMarkup >= 1e6, "price markeup too low");
         priceMarkup = _priceMarkup;
         priceUpdateThreshold = _updateThreshold;
         emit ConfigUpdated(_priceMarkup, _updateThreshold);
@@ -82,7 +81,7 @@ contract PimlicoERC20Paymaster is BasePaymaster {
         uint32 cachedMarkup = priceMarkup;
         require(cachedPrice != 0, "price not set");
         uint256 length = userOp.paymasterAndData.length - 20;
-        require(length & 30 == 0 , "invalid data length");
+        require(length & 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffde == 0 , "invalid data length");
         bool refund = length % 2 == 0;
         uint256 tokenAmount = (requiredPreFund + (refund ? REFUND_POSTOP_COST : NO_REFUND_POSTOP_COST) * userOp.maxFeePerGas) * cachedMarkup / cachedPrice;
         if(length > 2) {
