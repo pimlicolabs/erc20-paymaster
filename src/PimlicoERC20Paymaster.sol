@@ -9,7 +9,7 @@ import "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 import "./interfaces/IOracle.sol";
 
 /// @title PimlicoERC20Paymaster
-/// @notice A Paymaster contract for the Pimlico network that handles ERC20 token payments for transaction fees.
+/// @notice A Paymaster contract for the pimlico.io which handles ERC20 token payments for transaction fees.
 /// The contract supports refunding excess tokens if the actual gas cost is lower than the initially provided amount.
 /// It also allows updating price configuration and withdrawing tokens by the contract owner.
 /// The contract uses an Oracle to fetch the latest token prices.
