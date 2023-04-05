@@ -1,0 +1,13 @@
+[profile.default]
+src = 'src'
+out = 'artifacts'
+libs = ['node_modules']
+remappings = [
+    '@account-abstraction/=node_modules/@account-abstraction/',
+    '@ensdomains/=node_modules/@ensdomains/',
+    '@ethereum-waffle/=node_modules/@ethereum-waffle/',
+    '@openzeppelin/=node_modules/@openzeppelin/',
+    'hardhat/=node_modules/hardhat/',
+]
+
+# See more config options https://github.com/foundry-rs/foundry/tree/master/config
