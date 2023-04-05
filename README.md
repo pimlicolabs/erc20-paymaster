@@ -1,6 +1,6 @@
 # Pimlico ERC20 Paymaster
 ## Overview
-Pimlico ERC20 Paymaster is a smart contract designed for the Pimlico network to handle ERC20 token payments for transaction fees. It supports refunding excess tokens if the actual gas cost is lower than the initially provided amount. The contract also allows updating price configuration and withdrawing tokens by the contract owner. It uses an Oracle to fetch the latest token prices.
+Pimlico ERC20 Paymaster is a smart contract designed for the pimlico.io to handle ERC20 token payments for transaction fees. It supports refunding excess tokens if the actual gas cost is lower than the initially provided amount. The contract also allows updating price configuration and withdrawing tokens by the contract owner. It uses an Oracle to fetch the latest token prices.
 
 ## Features
 - ERC20 token payments for transaction fees
