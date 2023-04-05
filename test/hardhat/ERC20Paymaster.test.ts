@@ -76,10 +76,10 @@ describe('EntryPoint with paymaster', function () {
             }, accountOwner, entryPoint)
             await expect(entryPoint.callStatic.handleOps([op], beneficiaryAddress, {
               gasLimit: 1e7
-            })).to.revertedWith('FailedOp') // TODO : weird => cannot get AA32
+            })).to.revertedWith('FailedOp')
             await expect(entryPoint.handleOps([op], beneficiaryAddress, {
               gasLimit: 1e7
-            })).to.revertedWith('') // TODO : weird
+            })).to.revertedWith('')
           })
           it('paymaster be able to sponsor tx', async () => {
             await token.transfer(account.address, await token.balanceOf(await ethersSigner.getAddress()));
@@ -116,10 +116,10 @@ describe('EntryPoint with paymaster', function () {
             }, accountOwner, entryPoint)
             await expect(entryPoint.callStatic.handleOps([op], beneficiaryAddress, {
               gasLimit: 1e7
-            })).to.revertedWith('FailedOp') // TODO : weird => cannot get AA32
+            })).to.revertedWith('FailedOp')
             await expect(entryPoint.handleOps([op], beneficiaryAddress, {
               gasLimit: 1e7
-            })).to.revertedWith('') // TODO : weird
+            })).to.revertedWith('')
           })
           it('paymaster be able to sponsor tx', async () => {
             await token.transfer(account.address, await token.balanceOf(await ethersSigner.getAddress()));
@@ -157,10 +157,10 @@ describe('EntryPoint with paymaster', function () {
             }, accountOwner, entryPoint)
             await expect(entryPoint.callStatic.handleOps([op], beneficiaryAddress, {
               gasLimit: 1e7
-            })).to.revertedWith('FailedOp') // TODO : weird => cannot get AA32
+            })).to.revertedWith('FailedOp')
             await expect(entryPoint.handleOps([op], beneficiaryAddress, {
               gasLimit: 1e7
-            })).to.revertedWith('') // TODO : weird
+            })).to.revertedWith('')
           })
           it('paymaster be able to sponsor tx', async () => {
             await token.transfer(account.address, await token.balanceOf(await ethersSigner.getAddress()));
@@ -198,10 +198,10 @@ describe('EntryPoint with paymaster', function () {
             }, accountOwner, entryPoint)
             await expect(entryPoint.callStatic.handleOps([op], beneficiaryAddress, {
               gasLimit: 1e7
-            })).to.revertedWith('FailedOp') // TODO : weird => cannot get AA32
+            })).to.revertedWith('FailedOp')
             await expect(entryPoint.handleOps([op], beneficiaryAddress, {
               gasLimit: 1e7
-            })).to.revertedWith('') // TODO : weird
+            })).to.revertedWith('')
           })
           it('paymaster be able to sponsor tx', async () => {
             await token.transfer(account.address, await token.balanceOf(await ethersSigner.getAddress()));
@@ -241,10 +241,10 @@ describe('EntryPoint with paymaster', function () {
             }, accountOwner, entryPoint)
             await expect(entryPoint.callStatic.handleOps([op], beneficiaryAddress, {
               gasLimit: 1e7
-            })).to.revertedWith('FailedOp') // TODO : weird => cannot get AA32
+            })).to.revertedWith('FailedOp')
             await expect(entryPoint.handleOps([op], beneficiaryAddress, {
               gasLimit: 1e7
-            })).to.revertedWith('') // TODO : weird
+            })).to.revertedWith('')
           })
           it('paymaster be able to sponsor tx', async () => {
             await token.transfer(account.address, await token.balanceOf(await ethersSigner.getAddress()));
@@ -283,10 +283,10 @@ describe('EntryPoint with paymaster', function () {
             }, accountOwner, entryPoint)
             await expect(entryPoint.callStatic.handleOps([op], beneficiaryAddress, {
               gasLimit: 1e7
-            })).to.revertedWith('FailedOp') // TODO : weird => cannot get AA32
+            })).to.revertedWith('FailedOp')
             await expect(entryPoint.handleOps([op], beneficiaryAddress, {
               gasLimit: 1e7
-            })).to.revertedWith('') // TODO : weird
+            })).to.revertedWith('')
           })
           it('paymaster be able to sponsor tx', async () => {
             await token.transfer(account.address, await token.balanceOf(await ethersSigner.getAddress()));
@@ -326,10 +326,10 @@ describe('EntryPoint with paymaster', function () {
             }, accountOwner, entryPoint)
             await expect(entryPoint.callStatic.handleOps([op], beneficiaryAddress, {
               gasLimit: 1e7
-            })).to.revertedWith('FailedOp') // TODO : weird => cannot get AA32
+            })).to.revertedWith('FailedOp')
             await expect(entryPoint.handleOps([op], beneficiaryAddress, {
               gasLimit: 1e7
-            })).to.revertedWith('') // TODO : weird
+            })).to.revertedWith('')
           })
           it('paymaster be able to sponsor tx', async () => {
             await token.transfer(account.address, await token.balanceOf(await ethersSigner.getAddress()));
@@ -369,10 +369,10 @@ describe('EntryPoint with paymaster', function () {
             }, accountOwner, entryPoint)
             await expect(entryPoint.callStatic.handleOps([op], beneficiaryAddress, {
               gasLimit: 1e7
-            })).to.revertedWith('FailedOp') // TODO : weird => cannot get AA32
+            })).to.revertedWith('FailedOp')
             await expect(entryPoint.handleOps([op], beneficiaryAddress, {
               gasLimit: 1e7
-            })).to.revertedWith('') // TODO : weird
+            })).to.revertedWith('')
           })
           it('paymaster be able to sponsor tx', async () => {
             await token.transfer(account.address, await token.balanceOf(await ethersSigner.getAddress()));

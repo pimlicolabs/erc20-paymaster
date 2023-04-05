@@ -80,6 +80,7 @@ contract PimlicoERC20Paymaster is BasePaymaster {
             uint32 cachedMarkup = priceMarkup;
             require(cachedPrice != 0, "price not set");
             uint256 length = userOp.paymasterAndData.length - 20;
+            // 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffde is the mask for the last 6 bits 011110 which mean length should be 100001(33) || 100000(32) || 000001(1) || 000000(0)
             require(
                 length & 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffde == 0, "invalid data length"
             );
