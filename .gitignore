@@ -6,6 +6,10 @@ typechain
 typechain-types
 
 # Hardhat files
+cache_hardhat
 cache
 artifacts
 
+# forge files
+cache_forge
+out

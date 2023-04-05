@@ -19,7 +19,7 @@ contract PimlicoERC20Paymaster is BasePaymaster {
     uint256 public constant REFUND_POSTOP_COST = 40000; // Estimated gas cost for refunding tokens after the transaction is completed
     uint256 public constant NO_REFUND_POSTOP_COST = 20000; // Estimated gas cost for the post-operation when no refund is needed
 
-    IERC20 immutable token; // The ERC20 token used for transaction fee payments
+    IERC20 public immutable token; // The ERC20 token used for transaction fee payments
     IOracle public immutable oracle; // The Oracle contract used to fetch the latest token prices
 
     uint192 public previousPrice; // The cached token price from the Oracle
@@ -32,11 +32,12 @@ contract PimlicoERC20Paymaster is BasePaymaster {
     /// @param _token The ERC20 token used for transaction fee payments.
     /// @param _entryPoint The EntryPoint contract used in the Account Abstraction infrastructure.
     /// @param _oracle The Oracle contract used to fetch the latest token prices.
-    constructor(IERC20 _token, IEntryPoint _entryPoint, IOracle _oracle) BasePaymaster(_entryPoint) {
+    constructor(IERC20 _token, IEntryPoint _entryPoint, IOracle _oracle, address _owner) BasePaymaster(_entryPoint) {
         token = _token;
         oracle = _oracle;
         priceMarkup = 110e4; // 110%  1e6 = 100%
         priceUpdateThreshold = 25e3; // 2.5%  1e6 = 100%
+        transferOwnership(_owner);
     }
 
     /// @notice Updates the price markup and price update threshold configurations.

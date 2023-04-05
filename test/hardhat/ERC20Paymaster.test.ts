@@ -14,7 +14,7 @@ import {
   TestERC20,
   TestOracle,
   TestOracle__factory
-} from "../typechain-types";
+} from "../../typechain-types";
 import {
   createAccountOwner,
   fund,
@@ -51,7 +51,7 @@ describe('EntryPoint with paymaster', function () {
       await checkForGeth();
       token = await new TestERC20__factory(ethersSigner).deploy()
       oracle = await new TestOracle__factory(ethersSigner).deploy()
-      paymaster = await new PimlicoERC20Paymaster__factory(ethersSigner).deploy(token.address, entryPoint.address, oracle.address)
+      paymaster = await new PimlicoERC20Paymaster__factory(ethersSigner).deploy(token.address, entryPoint.address, oracle.address, await ethersSigner.getAddress())
       await token.transfer(paymaster.address, 100);
       await paymaster.updatePrice();
       await entryPoint.depositTo(paymaster.address, { value: parseEther('1000') })
