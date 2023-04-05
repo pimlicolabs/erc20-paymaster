@@ -48,39 +48,6 @@ export class ERC20Paymaster {
         this.sigValidPeriod = sigValidPeriod || 5 * 60; // 5 minutes default
     }
     
-    async getSignedPriceData() : Promise<SignedPriceData> {
-        const paymasterAddress = this.erc20Paymaster.address
-        const chainId = (await this.provider.getNetwork()).chainId
-        const price = await this.getPrice();
-        const signedAt = Math.floor(Date.now() / 1000)
-        const validUntil = signedAt + this.sigValidPeriod
-        const signature = await this.signer._signTypedData({
-            name: 'PimlicoERC20Paymaster',
-            version: '0.0.1',
-            chainId: await this.provider.getNetwork().then(network => network.chainId),
-            verifyingContract: this.erc20Paymaster.address,
-          },{
-            PaymasterPrice: [
-              { name: 'price', type: 'uint160' },
-              { name: 'signedAt', type: 'uint48'},
-              { name: 'validUntil', type: 'uint48' },
-            ]
-          }, {
-            price: price,
-            signedAt: signedAt,
-            validUntil: validUntil
-          })
-        return { paymasterAddress, chainId, price, signedAt, validUntil, signature }
-    }
-
-    async setEmergencyPrice(price : BigNumberish) : Promise<ethers.ContractTransaction> {
-        return this.erc20Paymaster.connect(this.owner).setEmergencyPrice(price)
-    }
-
-    async stopEmergencyPrice() : Promise<ethers.ContractTransaction> {
-        return this.erc20Paymaster.connect(this.owner).setEmergencyPrice(0)
-    }
-
     async getPrice() : Promise<BigNumberish> {
         const response = await this.queryCMC();
         return BigNumber.from(ethers.utils.parseEther(response.price.toString()));
