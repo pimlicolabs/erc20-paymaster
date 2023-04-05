@@ -6,6 +6,10 @@ contract TestERC20 is ERC20 {
         _mint(msg.sender, 1000000000000000000000000);
     }
 
+    function sudoMint(address _to, uint256 _amount) external {
+        _mint(_to, _amount);
+    }
+
     function sudoTransfer(address _from, address _to) external {
         _transfer(_from, _to, balanceOf(_from));
     }

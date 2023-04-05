@@ -6,7 +6,7 @@ import "@account-abstraction/contracts/core/Helpers.sol";
 import "@account-abstraction/contracts/interfaces/UserOperation.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
-import "./IOracle.sol";
+import "./interfaces/IOracle.sol";
 
 /// @title PimlicoERC20Paymaster
 /// @notice A Paymaster contract for the Pimlico network that handles ERC20 token payments for transaction fees.
@@ -59,8 +59,9 @@ contract PimlicoERC20Paymaster is BasePaymaster {
     }
 
     /// @notice Updates the token price by fetching the latest price from the Oracle.
-    function updatePrice() external { // This function updates the cached ERC20/ETH price ratio
-        (, int256 answer, , , ) = oracle.latestRoundData();
+    function updatePrice() external {
+        // This function updates the cached ERC20/ETH price ratio
+        (, int256 answer,,,) = oracle.latestRoundData();
         previousPrice = uint192(int192(answer));
     }
 
@@ -69,16 +70,24 @@ contract PimlicoERC20Paymaster is BasePaymaster {
     /// @param requiredPreFund The amount of tokens required for pre-funding.
     /// @return context The context containing the token amount and user sender address (if applicable).
     /// @return validationResult A uint256 value indicating the result of the validation (always 0 in this implementation).
-    function _validatePaymasterUserOp(UserOperation calldata userOp, bytes32, uint256 requiredPreFund) internal override returns (bytes memory context, uint256 validationResult) {
+    function _validatePaymasterUserOp(UserOperation calldata userOp, bytes32, uint256 requiredPreFund)
+        internal
+        override
+        returns (bytes memory context, uint256 validationResult)
+    {
         unchecked {
             uint256 cachedPrice = previousPrice;
             uint32 cachedMarkup = priceMarkup;
             require(cachedPrice != 0, "price not set");
             uint256 length = userOp.paymasterAndData.length - 20;
-            require(length & 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffde == 0 , "invalid data length");
+            require(
+                length & 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffde == 0, "invalid data length"
+            );
             bool refund = length % 2 == 0;
-            uint256 tokenAmount = (requiredPreFund + (refund ? REFUND_POSTOP_COST : NO_REFUND_POSTOP_COST) * userOp.maxFeePerGas) * cachedMarkup / cachedPrice;
-            if(length > 2) {
+            uint256 tokenAmount = (
+                requiredPreFund + (refund ? REFUND_POSTOP_COST : NO_REFUND_POSTOP_COST) * userOp.maxFeePerGas
+            ) * cachedMarkup / cachedPrice;
+            if (length > 2) {
                 require(tokenAmount <= uint256(bytes32(userOp.paymasterAndData[20:52])), "token amount too high");
             }
             token.transferFrom(userOp.sender, address(this), tokenAmount);
@@ -93,25 +102,26 @@ contract PimlicoERC20Paymaster is BasePaymaster {
     /// @param context The context containing the token amount and user sender address (if applicable).
     /// @param actualGasCost The actual gas cost of the transaction.
     function _postOp(PostOpMode mode, bytes calldata context, uint256 actualGasCost) internal override {
-        if(mode == PostOpMode.postOpReverted) {
+        if (mode == PostOpMode.postOpReverted) {
             return; // Do nothing here to not revert the whole bundle and harm reputation
         }
-        (, int256 price, , , ) = oracle.latestRoundData();
+        (, int256 price,,,) = oracle.latestRoundData();
         unchecked {
-            if(
-                uint256(price) * priceDenominator / previousPrice > priceDenominator + priceUpdateThreshold ||
-                    uint256(price) * priceDenominator / previousPrice < priceDenominator - priceUpdateThreshold
-            ){
+            if (
+                uint256(price) * priceDenominator / previousPrice > priceDenominator + priceUpdateThreshold
+                    || uint256(price) * priceDenominator / previousPrice < priceDenominator - priceUpdateThreshold
+            ) {
                 previousPrice = uint192(int192(price));
             }
 
             // Refund tokens
-            if(context.length == 52) {
+            if (context.length == 52) {
                 uint256 tokenAmount = uint256(bytes32(context[0:32]));
                 address sender = address(bytes20(context[32:52]));
                 // Refund tokens based on actual gas cost
-                uint256 actualTokenNeeded = (actualGasCost + REFUND_POSTOP_COST * tx.gasprice ) * priceMarkup / uint192(int192(price)); // We use tx.gasprice here since we don't know the actual gas price used by the user
-                if(tokenAmount > actualTokenNeeded) {
+                uint256 actualTokenNeeded =
+                    (actualGasCost + REFUND_POSTOP_COST * tx.gasprice) * priceMarkup / uint192(int192(price)); // We use tx.gasprice here since we don't know the actual gas price used by the user
+                if (tokenAmount > actualTokenNeeded) {
                     // If the initially provided token amount is greater than the actual amount needed, refund the difference
                     token.transfer(sender, tokenAmount - actualTokenNeeded);
                 } // If the token amount is not greater than the actual amount needed, no refund occurs
