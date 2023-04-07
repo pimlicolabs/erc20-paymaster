@@ -77,22 +77,20 @@ contract PimlicoERC20Paymaster is BasePaymaster {
     {
         unchecked {
             uint256 cachedPrice = previousPrice;
-            uint32 cachedMarkup = priceMarkup;
             require(cachedPrice != 0, "price not set");
             uint256 length = userOp.paymasterAndData.length - 20;
-            // 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffde is the mask for the last 6 bits 011110 which mean length should be 100001(33) || 100000(32) || 000001(1) || 000000(0)
+            // 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffdf is the mask for the last 6 bits 011111 which mean length should be 100000(32) || 000000(0)
             require(
-                length & 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffde == 0, "invalid data length"
+                length & 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffdf == 0, "invalid data length"
             );
-            bool refund = length % 2 == 0;
             uint256 tokenAmount = (
-                requiredPreFund + (refund ? REFUND_POSTOP_COST : NO_REFUND_POSTOP_COST) * userOp.maxFeePerGas
-            ) * cachedMarkup / cachedPrice;
-            if (length > 2) {
+                requiredPreFund + (REFUND_POSTOP_COST) * userOp.maxFeePerGas
+            ) * priceMarkup / cachedPrice;
+            if (length == 32) {
                 require(tokenAmount <= uint256(bytes32(userOp.paymasterAndData[20:52])), "token amount too high");
             }
             token.transferFrom(userOp.sender, address(this), tokenAmount);
-            context = refund ? abi.encodePacked(tokenAmount, userOp.sender) : bytes(hex"00");
+            context = abi.encodePacked(tokenAmount, userOp.sender);
             // No return here since validationData == 0 and we have context saved in memory
             validationResult = 0;
         }
@@ -107,26 +105,26 @@ contract PimlicoERC20Paymaster is BasePaymaster {
             return; // Do nothing here to not revert the whole bundle and harm reputation
         }
         (, int256 price,,,) = oracle.latestRoundData();
+        // uint32 chachedMarkup = priceMarkup;
+        uint32 cachedUpdateThreshold = priceUpdateThreshold;
+        uint192 cachedPrice = previousPrice;
         unchecked {
             if (
-                uint256(price) * priceDenominator / previousPrice > priceDenominator + priceUpdateThreshold
-                    || uint256(price) * priceDenominator / previousPrice < priceDenominator - priceUpdateThreshold
+                uint256(price) * priceDenominator / cachedPrice > priceDenominator + cachedUpdateThreshold
+                    || uint256(price) * priceDenominator / cachedPrice < priceDenominator - cachedUpdateThreshold
             ) {
                 previousPrice = uint192(int192(price));
+                cachedPrice = uint192(int192(price));
             }
-
-            // Refund tokens
-            if (context.length == 52) {
-                uint256 tokenAmount = uint256(bytes32(context[0:32]));
-                address sender = address(bytes20(context[32:52]));
-                // Refund tokens based on actual gas cost
-                uint256 actualTokenNeeded =
-                    (actualGasCost + REFUND_POSTOP_COST * tx.gasprice) * priceMarkup / uint192(int192(price)); // We use tx.gasprice here since we don't know the actual gas price used by the user
-                if (tokenAmount > actualTokenNeeded) {
-                    // If the initially provided token amount is greater than the actual amount needed, refund the difference
-                    token.transfer(sender, tokenAmount - actualTokenNeeded);
-                } // If the token amount is not greater than the actual amount needed, no refund occurs
-            }
+            // uint256 tokenAmount = uint256(bytes32(context[0:32]));
+            //address sender = address(bytes20(context[32:52]));
+            // Refund tokens based on actual gas cost
+            uint256 actualTokenNeeded =
+                (actualGasCost + REFUND_POSTOP_COST * tx.gasprice) * priceMarkup / cachedPrice; // We use tx.gasprice here since we don't know the actual gas price used by the user
+            if (uint256(bytes32(context[0:32])) > actualTokenNeeded) {
+                // If the initially provided token amount is greater than the actual amount needed, refund the difference
+                token.transfer(address(bytes20(context[32:52])), uint256(bytes32(context[0:32])) - actualTokenNeeded);
+            } // If the token amount is not greater than the actual amount needed, no refund occurs
         }
     }
 }
