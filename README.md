@@ -1,6 +1,6 @@
 # Pimlico ERC20 Paymaster
 ## Overview
-Pimlico ERC20 Paymaster is a smart contract designed for the pimlico.io to handle ERC20 token payments for transaction fees. It supports refunding excess tokens if the actual gas cost is lower than the initially provided amount. The contract also allows updating price configuration and withdrawing tokens by the contract owner. It uses an Oracle to fetch the latest token prices.
+PimlicoERC20Paymaster is an ERC-4337 Paymaster contract by Pimlico which is able to sponsor gas fees in exchange for ERC20 tokens. The contract refunds excess tokens if the actual gas cost is lower than the initially provided amount. It also allows updating price configuration and withdrawing tokens by the contract owner. The contract uses an Oracle to fetch the latest token prices.
 
 ## Features
 - ERC20 token payments for transaction fees
@@ -10,7 +10,7 @@ Pimlico ERC20 Paymaster is a smart contract designed for the pimlico.io to handl
 - Fetching latest token prices using an Oracle
 
 ## Contract
-The PimlicoERC20Paymaster contract inherits from BasePaymaster and adheres to the UserOperation interface.
+The PimlicoERC20Paymaster contract inherits from BasePaymaster.
 
 ### Functions
 - constructor: Initializes the PimlicoERC20Paymaster contract with the given parameters.
@@ -18,7 +18,7 @@ The PimlicoERC20Paymaster contract inherits from BasePaymaster and adheres to th
 - withdrawToken: Allows the contract owner to withdraw a specified amount of tokens from the contract.
 - updatePrice: Updates the token price by fetching the latest price from the Oracle.
 - _validatePaymasterUserOp: Validates a paymaster user operation and calculates the required token amount for the transaction.
-- _postOp: Performs post-operation tasks, such as updating the token price and refunding excess tokens (if applicable).
+- _postOp: Performs post-operation tasks, such as updating the token price and refunding excess tokens.
 ### Events
 - ConfigUpdated: Emitted when the price markup and price update threshold configurations are updated.
 
@@ -31,11 +31,11 @@ For more information, please refer to the comments within the contract source co
 
 ## Development setup
 
-this repository uses both hardhat and foundry for development, and assumes you have already installed hardhat/foundry
+This repository uses both hardhat and foundry for development, and assumes you have already installed hardhat/foundry
 
 ### hardhat
 
-hardhat is used for gas metering and developing sdk.
+Hardhat is used for gas metering and developing sdk.
 
 1. install dependencies
 ```shell
@@ -43,15 +43,15 @@ npm install
 ```
 2. run test
 ```
-npx hardhat test
+Npx hardhat test
 ```
-this will show results for the gas metering on different modes based on 1) refund 2) token payment limit 3) price update
+This will show results for the gas metering on different modes based on 1) refund 2) token payment limit 3) price update
 
 *note* : first transaction is expensive because nonce increases 0 -> 1
 
 ### foundry
 
-foundry is used for unit tests
+Foundry is used for unit tests
 
 1. install dependencies
 ```shell
