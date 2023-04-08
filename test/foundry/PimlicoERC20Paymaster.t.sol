@@ -250,7 +250,7 @@ contract PimlicoERC20PaymasterTest is Test {
         token.sudoApprove(address(account), address(paymaster), 1000e6);
         (UserOperation memory op, uint256 prefund) =
             fillUserOp(account, userKey, address(counter), 0, abi.encodeWithSelector(TestCounter.count.selector));
-        op.paymasterAndData = abi.encodePacked(address(paymaster), hex"00");
+        op.paymasterAndData = abi.encodePacked(address(paymaster));
         op.signature = signUserOp(op, userKey);
         UserOperation[] memory ops = new UserOperation[](1);
         ops[0] = op;

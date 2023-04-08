@@ -9,15 +9,14 @@ import "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 import "./interfaces/IOracle.sol";
 
 /// @title PimlicoERC20Paymaster
-/// @notice A Paymaster contract for the pimlico.io which handles ERC20 token payments for transaction fees.
-/// The contract supports refunding excess tokens if the actual gas cost is lower than the initially provided amount.
+/// @notice An ERC-4337 Paymaster contract by Pimlico which is able to sponsor gas fees in exchange for ERC-20 tokens.
+/// The contract refunds excess tokens if the actual gas cost is lower than the initially provided amount.
 /// It also allows updating price configuration and withdrawing tokens by the contract owner.
 /// The contract uses an Oracle to fetch the latest token prices.
-/// @dev Inherits from BasePaymaster and adheres to the UserOperation interface.
+/// @dev Inherits from BasePaymaster.
 contract PimlicoERC20Paymaster is BasePaymaster {
     uint256 public constant priceDenominator = 1e6;
     uint256 public constant REFUND_POSTOP_COST = 40000; // Estimated gas cost for refunding tokens after the transaction is completed
-    uint256 public constant NO_REFUND_POSTOP_COST = 20000; // Estimated gas cost for the post-operation when no refund is needed
 
     IERC20 public immutable token; // The ERC20 token used for transaction fee payments
     IOracle public immutable oracle; // The Oracle contract used to fetch the latest token prices
@@ -96,9 +95,9 @@ contract PimlicoERC20Paymaster is BasePaymaster {
         }
     }
 
-    /// @notice Performs post-operation tasks, such as updating the token price and refunding excess tokens (if applicable).
+    /// @notice Performs post-operation tasks, such as updating the token price and refunding excess tokens.
     /// @param mode The post-operation mode (either successful or reverted).
-    /// @param context The context containing the token amount and user sender address (if applicable).
+    /// @param context The context containing the token amount and user sender address.
     /// @param actualGasCost The actual gas cost of the transaction.
     function _postOp(PostOpMode mode, bytes calldata context, uint256 actualGasCost) internal override {
         if (mode == PostOpMode.postOpReverted) {
