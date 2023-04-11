@@ -7,6 +7,7 @@ import "@account-abstraction/contracts/interfaces/UserOperation.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 import "./interfaces/IOracle.sol";
+import "@account-abstraction/contracts/core/EntryPoint.sol";
 
 /// @title PimlicoERC20Paymaster
 /// @notice An ERC-4337 Paymaster contract by Pimlico which is able to sponsor gas fees in exchange for ERC-20 tokens.

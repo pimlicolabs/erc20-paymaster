@@ -288,7 +288,7 @@ contract PimlicoERC20PaymasterTest is Test {
         returns (UserOperation memory op, uint256 prefund)
     {
         op.sender = address(_sender);
-        op.nonce = _sender.nonce();
+        op.nonce = entryPoint.getNonce(address(_sender), 0);
         op.callData = abi.encodeWithSelector(SimpleAccount.execute.selector, _to, _value, _data);
         op.callGasLimit = 50000;
         op.verificationGasLimit = 80000;
