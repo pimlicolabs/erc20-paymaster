@@ -105,7 +105,6 @@ contract PimlicoERC20Paymaster is BasePaymaster {
             return; // Do nothing here to not revert the whole bundle and harm reputation
         }
         (, int256 price,,,) = oracle.latestRoundData();
-        // uint32 chachedMarkup = priceMarkup;
         uint32 cachedUpdateThreshold = priceUpdateThreshold;
         uint192 cachedPrice = previousPrice;
         unchecked {
@@ -116,8 +115,6 @@ contract PimlicoERC20Paymaster is BasePaymaster {
                 previousPrice = uint192(int192(price));
                 cachedPrice = uint192(int192(price));
             }
-            // uint256 tokenAmount = uint256(bytes32(context[0:32]));
-            //address sender = address(bytes20(context[32:52]));
             // Refund tokens based on actual gas cost
             uint256 actualTokenNeeded =
                 (actualGasCost + REFUND_POSTOP_COST * tx.gasprice) * priceMarkup / cachedPrice; // We use tx.gasprice here since we don't know the actual gas price used by the user
