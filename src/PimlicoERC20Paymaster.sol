@@ -28,6 +28,8 @@ contract PimlicoERC20Paymaster is BasePaymaster {
 
     event ConfigUpdated(uint32 priceMarkup, uint32 updateThreshold);
 
+    event UserOperationSponsored(address indexed user, uint256 actualTokenNeeded, uint256 actualGasCost);
+
     /// @notice Initializes the PimlicoERC20Paymaster contract with the given parameters.
     /// @param _token The ERC20 token used for transaction fee payments.
     /// @param _entryPoint The EntryPoint contract used in the Account Abstraction infrastructure.
@@ -122,6 +124,8 @@ contract PimlicoERC20Paymaster is BasePaymaster {
                 // If the initially provided token amount is greater than the actual amount needed, refund the difference
                 token.transfer(address(bytes20(context[32:52])), uint256(bytes32(context[0:32])) - actualTokenNeeded);
             } // If the token amount is not greater than the actual amount needed, no refund occurs
+
+            emit UserOperationSponsored(address(bytes20(context[32:52])), actualTokenNeeded, actualGasCost);
         }
     }
 }
