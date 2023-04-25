@@ -39,6 +39,7 @@ contract PimlicoERC20PaymasterTest is Test {
         accountFactory = new SimpleAccountFactory(entryPoint);
         paymaster = new PimlicoERC20Paymaster(
             token,
+            6,
             entryPoint,
             oracle,
             paymasterOperator
@@ -55,6 +56,7 @@ contract PimlicoERC20PaymasterTest is Test {
     function testDeploy() external {
         PimlicoERC20Paymaster testArtifact = new PimlicoERC20Paymaster(
             token,
+            6,
             entryPoint,
             oracle,
             paymasterOperator

@@ -22,6 +22,7 @@ contract PimlicoERC20Paymaster is BasePaymaster {
 
     IERC20 public immutable token; // The ERC20 token used for transaction fee payments
     IOracle public immutable oracle; // The Oracle contract used to fetch the latest token prices
+    uint256 public immutable tokenDecimals;
 
     uint192 public previousPrice; // The cached token price from the Oracle
     uint32 public priceMarkup; // The price markup percentage applied to the token price (1e6 = 100%)
@@ -35,12 +36,13 @@ contract PimlicoERC20Paymaster is BasePaymaster {
     /// @param _token The ERC20 token used for transaction fee payments.
     /// @param _entryPoint The EntryPoint contract used in the Account Abstraction infrastructure.
     /// @param _oracle The Oracle contract used to fetch the latest token prices.
-    constructor(IERC20 _token, IEntryPoint _entryPoint, IOracle _oracle, address _owner) BasePaymaster(_entryPoint) {
+    constructor(IERC20 _token, uint8 _decimals, IEntryPoint _entryPoint, IOracle _oracle, address _owner) BasePaymaster(_entryPoint) {
         token = _token;
         oracle = _oracle;
         priceMarkup = 110e4; // 110%  1e6 = 100%
         priceUpdateThreshold = 25e3; // 2.5%  1e6 = 100%
         transferOwnership(_owner);
+        tokenDecimals = 10 ** _decimals;
     }
 
     /// @notice Updates the price markup and price update threshold configurations.
@@ -89,7 +91,7 @@ contract PimlicoERC20Paymaster is BasePaymaster {
             );
             uint256 tokenAmount = (
                 requiredPreFund + (REFUND_POSTOP_COST) * userOp.maxFeePerGas
-            ) * priceMarkup / cachedPrice;
+            ) * tokenDecimals * priceMarkup / (cachedPrice * 1e6);
             if (length == 32) {
                 require(tokenAmount <= uint256(bytes32(userOp.paymasterAndData[20:52])), "token amount too high");
             }
@@ -121,7 +123,7 @@ contract PimlicoERC20Paymaster is BasePaymaster {
             }
             // Refund tokens based on actual gas cost
             uint256 actualTokenNeeded =
-                (actualGasCost + REFUND_POSTOP_COST * tx.gasprice) * priceMarkup / cachedPrice; // We use tx.gasprice here since we don't know the actual gas price used by the user
+                (actualGasCost + REFUND_POSTOP_COST * tx.gasprice) * tokenDecimals * priceMarkup / (cachedPrice * 1e6); // We use tx.gasprice here since we don't know the actual gas price used by the user
             if (uint256(bytes32(context[0:32])) > actualTokenNeeded) {
                 // If the initially provided token amount is greater than the actual amount needed, refund the difference
                 SafeTransferLib.safeTransfer(address(token), address(bytes20(context[32:52])), uint256(bytes32(context[0:32])) - actualTokenNeeded);
