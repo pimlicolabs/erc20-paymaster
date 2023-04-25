@@ -49,7 +49,7 @@ describe('EntryPoint with paymaster', function () {
     let token: TestERC20
     before(async () => {
       await checkForGeth();
-      token = await new TestERC20__factory(ethersSigner).deploy()
+      token = await new TestERC20__factory(ethersSigner).deploy(6)
       oracle = await new TestOracle__factory(ethersSigner).deploy()
       paymaster = await new PimlicoERC20Paymaster__factory(ethersSigner).deploy(token.address, entryPoint.address, oracle.address, await ethersSigner.getAddress())
       await token.transfer(paymaster.address, 100);
