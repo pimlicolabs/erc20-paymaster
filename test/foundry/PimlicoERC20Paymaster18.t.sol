@@ -20,7 +20,8 @@ contract PimlicoERC20Paymaster18Test is Test {
     SimpleAccountFactory accountFactory;
     PimlicoERC20Paymaster paymaster;
     TestERC20 token;
-    TestOracle oracle;
+    TestOracle tokenOracle;
+    TestOracle nativeAssetOracle;
     TestCounter counter;
 
     address payable beneficiary;
@@ -35,13 +36,16 @@ contract PimlicoERC20Paymaster18Test is Test {
         (user, userKey) = makeAddrAndKey("user");
         entryPoint = new EntryPoint();
         token = new TestERC20(18);
-        oracle = new TestOracle();
-        oracle.setPrice(531242748818150);
+        tokenOracle = new TestOracle();
+        tokenOracle.setPrice(100000000);
+        nativeAssetOracle = new TestOracle();
+        nativeAssetOracle.setPrice(189933000000);
         accountFactory = new SimpleAccountFactory(entryPoint);
         paymaster = new PimlicoERC20Paymaster(
             token,
             entryPoint,
-            oracle,
+            tokenOracle,
+            nativeAssetOracle,
             paymasterOperator
         );
         account = accountFactory.createAccount(user, 0);
@@ -51,18 +55,20 @@ contract PimlicoERC20Paymaster18Test is Test {
         entryPoint.depositTo{value: 100e18}(address(paymaster));
         paymaster.addStake{value: 100e18}(1);
         vm.stopPrank();
+        vm.warp(1680509051);
     }
 
     function testDeploy() external {
         PimlicoERC20Paymaster testArtifact = new PimlicoERC20Paymaster(
             token,
             entryPoint,
-            oracle,
+            tokenOracle,
+            nativeAssetOracle,
             paymasterOperator
         );
         assertEq(address(testArtifact.token()), address(token));
         assertEq(address(testArtifact.entryPoint()), address(entryPoint));
-        assertEq(address(testArtifact.oracle()), address(oracle));
+        assertEq(address(testArtifact.tokenOracle()), address(tokenOracle));
         assertEq(address(testArtifact.owner()), paymasterOperator);
     }
 
@@ -88,7 +94,7 @@ contract PimlicoERC20Paymaster18Test is Test {
         _priceMarkup = uint32(bound(_priceMarkup, 0, 1e6 - 1)); // 100% - 120%
         _updateThreshold = uint32(bound(_updateThreshold, 0, _priceMarkup));
         vm.startPrank(paymasterOperator);
-        vm.expectRevert("price markeup too low");
+        vm.expectRevert("PP-ERC20 : price markeup too low");
         paymaster.updateConfig(_priceMarkup, _updateThreshold);
         vm.stopPrank();
     }
@@ -97,7 +103,7 @@ contract PimlicoERC20Paymaster18Test is Test {
         _priceMarkup = uint32(bound(_priceMarkup, 12e5 + 1, type(uint32).max)); // 100% - 120%
         _updateThreshold = uint32(bound(_updateThreshold, 0, _priceMarkup));
         vm.startPrank(paymasterOperator);
-        vm.expectRevert("price markup too high");
+        vm.expectRevert("PP-ERC20 : price markup too high");
         paymaster.updateConfig(_priceMarkup, _updateThreshold);
         vm.stopPrank();
     }
@@ -122,11 +128,11 @@ contract PimlicoERC20Paymaster18Test is Test {
     }
 
     function testUpdatePrice(int192 _price) external {
-        vm.assume(_price > 0);
+        vm.assume(_price > 1e8);
         vm.assume(uint192(_price) < type(uint120).max);
-        oracle.setPrice(_price);
+        nativeAssetOracle.setPrice(_price);
         paymaster.updatePrice();
-        assertEq(uint256(paymaster.previousPrice()), uint256(uint192(_price)));
+        assertEq(uint256(paymaster.previousPrice()), uint256(uint192(_price)) * 1e10);
     }
 
     // sanity check for everything works without paymaster
@@ -185,7 +191,9 @@ contract PimlicoERC20Paymaster18Test is Test {
         UserOperation[] memory ops = new UserOperation[](1);
         ops[0] = op;
         vm.expectRevert(
-            abi.encodeWithSelector(IEntryPoint.FailedOp.selector, uint256(0), "AA33 reverted: token amount too high")
+            abi.encodeWithSelector(
+                IEntryPoint.FailedOp.selector, uint256(0), "AA33 reverted: PP-ERC20 : token amount too high"
+            )
         );
         entryPoint.handleOps(ops, beneficiary);
     }
@@ -203,7 +211,9 @@ contract PimlicoERC20Paymaster18Test is Test {
         UserOperation[] memory ops = new UserOperation[](1);
         ops[0] = op;
         vm.expectRevert(
-            abi.encodeWithSelector(IEntryPoint.FailedOp.selector, uint256(0), "AA33 reverted: invalid data length")
+            abi.encodeWithSelector(
+                IEntryPoint.FailedOp.selector, uint256(0), "AA33 reverted: PP-ERC20 : invalid data length"
+            )
         );
         entryPoint.handleOps(ops, beneficiary);
     }
@@ -211,7 +221,7 @@ contract PimlicoERC20Paymaster18Test is Test {
     function testERC20PaymasterUpdatePriceUp() external {
         paymaster.updatePrice();
         uint256 prevPrice = paymaster.previousPrice();
-        oracle.setPrice(int256(prevPrice) * 111 / 100);
+        nativeAssetOracle.setPrice(int256(nativeAssetOracle.price()) * 111 / 100);
         vm.deal(address(account), 1e18);
         token.sudoMint(address(account), 1000e18); // 1000 usdc;
         token.sudoMint(address(paymaster), 1); // 1000 usdc;
@@ -229,7 +239,7 @@ contract PimlicoERC20Paymaster18Test is Test {
     function testERC20PaymasterUpdatePriceDown() external {
         paymaster.updatePrice();
         uint256 prevPrice = paymaster.previousPrice();
-        oracle.setPrice(int256(prevPrice) * 89 / 100);
+        nativeAssetOracle.setPrice(int256(nativeAssetOracle.price()) * 89 / 100);
         vm.deal(address(account), 1e18);
         token.sudoMint(address(account), 1000e18); // 1000 usdc;
         token.sudoMint(address(paymaster), 1); // 1000 usdc;
@@ -256,7 +266,7 @@ contract PimlicoERC20Paymaster18Test is Test {
         UserOperation[] memory ops = new UserOperation[](1);
         ops[0] = op;
         vm.expectRevert(
-            abi.encodeWithSelector(IEntryPoint.FailedOp.selector, uint256(0), "AA33 reverted: price not set")
+            abi.encodeWithSelector(IEntryPoint.FailedOp.selector, uint256(0), "AA33 reverted: PP-ERC20 : price not set")
         );
         entryPoint.handleOps(ops, beneficiary);
     }
