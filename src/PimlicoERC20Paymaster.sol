@@ -70,7 +70,11 @@ contract PimlicoERC20Paymaster is BasePaymaster {
     /// @notice Updates the token price by fetching the latest price from the Oracle.
     function updatePrice() external {
         // This function updates the cached ERC20/ETH price ratio
-        (, int256 answer,,,) = oracle.latestRoundData();
+        (uint80 roundId, int256 answer,, uint256 updatedAt, uint80 answeredInRound) = oracle.latestRoundData();
+
+        require(answer > 0, "Chainlink price <= 0");
+        require(updatedAt != 0, "Incomplete round");
+        require(answeredInRound >= roundId, "Stale price");
         previousPrice = uint192(int192(answer));
     }
 
@@ -113,7 +117,11 @@ contract PimlicoERC20Paymaster is BasePaymaster {
         if (mode == PostOpMode.postOpReverted) {
             return; // Do nothing here to not revert the whole bundle and harm reputation
         }
-        (, int256 price,,,) = oracle.latestRoundData();
+        (uint80 roundId, int256 price,, uint256 updatedAt, uint80 answeredInRound) = oracle.latestRoundData();
+
+        require(price > 0, "Chainlink price <= 0");
+        require(updatedAt != 0, "Incomplete round");
+        require(answeredInRound >= roundId, "Stale price");
         uint32 cachedUpdateThreshold = priceUpdateThreshold;
         uint192 cachedPrice = previousPrice;
         unchecked {

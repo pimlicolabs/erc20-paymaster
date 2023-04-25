@@ -23,6 +23,6 @@ contract TestOracle is IOracle {
         override
         returns (uint80 roundId, int256 answer, uint256 startedAt, uint256 updatedAt, uint80 answeredInRound)
     {
-        return (73786976294838215802, price, 1680509051, 1680509051, 73786976294838215802);
+        return (73786976294838215802, price, 1680509051, block.timestamp, 73786976294838215802);
     }
 }
