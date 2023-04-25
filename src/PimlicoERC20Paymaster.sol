@@ -48,6 +48,7 @@ contract PimlicoERC20Paymaster is BasePaymaster {
     function updateConfig(uint32 _priceMarkup, uint32 _updateThreshold) external onlyOwner {
         require(_priceMarkup <= 120e4, "price markup too high");
         require(_priceMarkup >= 1e6, "price markeup too low");
+        require(_updateThreshold <= 1e6, "update threshold too high");
         priceMarkup = _priceMarkup;
         priceUpdateThreshold = _updateThreshold;
         emit ConfigUpdated(_priceMarkup, _updateThreshold);
