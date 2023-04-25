@@ -5,6 +5,7 @@
     "@openzeppelin/contracts": "^4.8.2",
     "axios": "^1.3.4",
     "hardhat": "^2.13.0",
+    "solady": "^0.0.90",
     "solidity-coverage": "^0.8.2"
   },
   "devDependencies": {

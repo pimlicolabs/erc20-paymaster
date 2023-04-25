@@ -8,6 +8,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 import "./interfaces/IOracle.sol";
 import "@account-abstraction/contracts/core/EntryPoint.sol";
+import "./utils/SafeTransferLib.sol";
 
 /// @title PimlicoERC20Paymaster
 /// @notice An ERC-4337 Paymaster contract by Pimlico which is able to sponsor gas fees in exchange for ERC20 tokens.
@@ -58,7 +59,7 @@ contract PimlicoERC20Paymaster is BasePaymaster {
     /// @param to The address to transfer the tokens to.
     /// @param amount The amount of tokens to transfer.
     function withdrawToken(address to, uint256 amount) external onlyOwner {
-        token.transfer(to, amount);
+        SafeTransferLib.safeTransfer(address(token),to,amount);
     }
 
     /// @notice Updates the token price by fetching the latest price from the Oracle.
@@ -92,7 +93,7 @@ contract PimlicoERC20Paymaster is BasePaymaster {
             if (length == 32) {
                 require(tokenAmount <= uint256(bytes32(userOp.paymasterAndData[20:52])), "token amount too high");
             }
-            token.transferFrom(userOp.sender, address(this), tokenAmount);
+            SafeTransferLib.safeTransferFrom(address(token), userOp.sender, address(this), tokenAmount);
             context = abi.encodePacked(tokenAmount, userOp.sender);
             // No return here since validationData == 0 and we have context saved in memory
             validationResult = 0;
@@ -123,7 +124,7 @@ contract PimlicoERC20Paymaster is BasePaymaster {
                 (actualGasCost + REFUND_POSTOP_COST * tx.gasprice) * priceMarkup / cachedPrice; // We use tx.gasprice here since we don't know the actual gas price used by the user
             if (uint256(bytes32(context[0:32])) > actualTokenNeeded) {
                 // If the initially provided token amount is greater than the actual amount needed, refund the difference
-                token.transfer(address(bytes20(context[32:52])), uint256(bytes32(context[0:32])) - actualTokenNeeded);
+                SafeTransferLib.safeTransfer(address(token), address(bytes20(context[32:52])), uint256(bytes32(context[0:32])) - actualTokenNeeded);
             } // If the token amount is not greater than the actual amount needed, no refund occurs
 
             emit UserOperationSponsored(address(bytes20(context[32:52])), actualTokenNeeded, actualGasCost);
