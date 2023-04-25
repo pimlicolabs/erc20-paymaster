@@ -75,7 +75,7 @@ contract PimlicoERC20PaymasterTest is Test {
 
     function testUpdateConfigSuccess(uint32 _priceMarkup, uint32 _updateThreshold) external {
         _priceMarkup = uint32(bound(_priceMarkup, 1e6, 12e5)); // 100% - 120%
-        _updateThreshold = uint32(bound(_updateThreshold, 0, _priceMarkup));
+        _updateThreshold = uint32(bound(_updateThreshold, 0, 1e6));
         vm.startPrank(paymasterOperator);
         paymaster.updateConfig(_priceMarkup, _updateThreshold);
         assertEq(paymaster.priceMarkup(), _priceMarkup);
@@ -97,6 +97,15 @@ contract PimlicoERC20PaymasterTest is Test {
         _updateThreshold = uint32(bound(_updateThreshold, 0, _priceMarkup));
         vm.startPrank(paymasterOperator);
         vm.expectRevert("price markup too high");
+        paymaster.updateConfig(_priceMarkup, _updateThreshold);
+        vm.stopPrank();
+    }
+
+    function testUpdateConfigFailThresholdTooHigh(uint32 _priceMarkup, uint32 _updateThreshold) external {
+        _priceMarkup = uint32(bound(_priceMarkup, 1e6, 12e5)); // 100% - 120%
+        _updateThreshold = uint32(bound(_updateThreshold, 1e6 + 1, type(uint32).max));
+        vm.startPrank(paymasterOperator);
+        vm.expectRevert("update threshold too high");
         paymaster.updateConfig(_priceMarkup, _updateThreshold);
         vm.stopPrank();
     }
