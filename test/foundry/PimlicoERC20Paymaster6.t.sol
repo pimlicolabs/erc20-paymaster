@@ -51,6 +51,7 @@ contract PimlicoERC20Paymaster6Test is Test {
         entryPoint.depositTo{value: 100e18}(address(paymaster));
         paymaster.addStake{value: 100e18}(1);
         vm.stopPrank();
+        vm.warp(1680509051);
     }
 
     function testDeploy() external {

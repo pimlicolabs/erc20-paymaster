@@ -73,7 +73,7 @@ contract PimlicoERC20Paymaster is BasePaymaster {
         (uint80 roundId, int256 answer,, uint256 updatedAt, uint80 answeredInRound) = oracle.latestRoundData();
 
         require(answer > 0, "Chainlink price <= 0");
-        require(updatedAt != 0, "Incomplete round");
+        require(updatedAt >= block.timestamp - 600, "Incomplete round");
         require(answeredInRound >= roundId, "Stale price");
         previousPrice = uint192(int192(answer));
     }
@@ -120,7 +120,7 @@ contract PimlicoERC20Paymaster is BasePaymaster {
         (uint80 roundId, int256 price,, uint256 updatedAt, uint80 answeredInRound) = oracle.latestRoundData();
 
         require(price > 0, "Chainlink price <= 0");
-        require(updatedAt != 0, "Incomplete round");
+        require(updatedAt >= block.timestamp - 600, "Incomplete round");
         require(answeredInRound >= roundId, "Stale price");
         uint32 cachedUpdateThreshold = priceUpdateThreshold;
         uint192 cachedPrice = previousPrice;
