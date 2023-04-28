@@ -16,6 +16,7 @@ import "./utils/SafeTransferLib.sol";
 /// It also allows updating price configuration and withdrawing tokens by the contract owner.
 /// The contract uses an Oracle to fetch the latest token prices.
 /// @dev Inherits from BasePaymaster.
+
 contract PimlicoERC20Paymaster is BasePaymaster {
     uint256 public constant priceDenominator = 1e6;
     uint256 public constant REFUND_POSTOP_COST = 40000; // Estimated gas cost for refunding tokens after the transaction is completed
@@ -36,7 +37,9 @@ contract PimlicoERC20Paymaster is BasePaymaster {
     /// @param _token The ERC20 token used for transaction fee payments.
     /// @param _entryPoint The EntryPoint contract used in the Account Abstraction infrastructure.
     /// @param _oracle The Oracle contract used to fetch the latest token prices.
-    constructor(IERC20 _token, uint8 _decimals, IEntryPoint _entryPoint, IOracle _oracle, address _owner) BasePaymaster(_entryPoint) {
+    constructor(IERC20 _token, uint8 _decimals, IEntryPoint _entryPoint, IOracle _oracle, address _owner)
+        BasePaymaster(_entryPoint)
+    {
         token = _token;
         oracle = _oracle;
         priceMarkup = 110e4; // 110%  1e6 = 100%
@@ -89,9 +92,9 @@ contract PimlicoERC20Paymaster is BasePaymaster {
             require(
                 length & 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffdf == 0, "invalid data length"
             );
-            uint256 tokenAmount = (
-                requiredPreFund + (REFUND_POSTOP_COST) * userOp.maxFeePerGas
-            ) * tokenDecimals * priceMarkup / (cachedPrice * 1e6);
+            uint256 tokenAmount = (requiredPreFund + (REFUND_POSTOP_COST) * userOp.maxFeePerGas) * tokenDecimals
+                * priceMarkup / (cachedPrice * 1e6);
+
             if (length == 32) {
                 require(tokenAmount <= uint256(bytes32(userOp.paymasterAndData[20:52])), "token amount too high");
             }

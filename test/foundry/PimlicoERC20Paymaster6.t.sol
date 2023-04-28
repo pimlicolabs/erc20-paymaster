@@ -15,7 +15,7 @@ using ECDSA for bytes32;
 
 import "./BytesLib.sol";
 
-contract PimlicoERC20PaymasterTest is Test {
+contract PimlicoERC20Paymaster6Test is Test {
     EntryPoint entryPoint;
     SimpleAccountFactory accountFactory;
     PimlicoERC20Paymaster paymaster;
