@@ -92,9 +92,9 @@ contract PimlicoERC20Paymaster is BasePaymaster {
             require(
                 length & 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffdf == 0, "invalid data length"
             );
-            uint256 tokenAmount = (
-                requiredPreFund + (REFUND_POSTOP_COST) * userOp.maxFeePerGas
-            ) * tokenDecimals * priceMarkup / (cachedPrice * 1e6);
+            uint256 tokenAmount = (requiredPreFund + (REFUND_POSTOP_COST) * userOp.maxFeePerGas) * tokenDecimals
+                * priceMarkup / (cachedPrice * 1e6);
+
             if (length == 32) {
                 require(tokenAmount <= uint256(bytes32(userOp.paymasterAndData[20:52])), "token amount too high");
             }
