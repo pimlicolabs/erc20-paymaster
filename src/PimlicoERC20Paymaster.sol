@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 import "@account-abstraction/contracts/core/BasePaymaster.sol";
 import "@account-abstraction/contracts/core/Helpers.sol";
 import "@account-abstraction/contracts/interfaces/UserOperation.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 import "./interfaces/IOracle.sol";
 import "@account-abstraction/contracts/core/EntryPoint.sol";
@@ -37,7 +37,7 @@ contract PimlicoERC20Paymaster is BasePaymaster {
     /// @param _token The ERC20 token used for transaction fee payments.
     /// @param _entryPoint The EntryPoint contract used in the Account Abstraction infrastructure.
     /// @param _oracle The Oracle contract used to fetch the latest token prices.
-    constructor(IERC20 _token, uint8 _decimals, IEntryPoint _entryPoint, IOracle _oracle, address _owner)
+    constructor(IERC20Metadata _token, IEntryPoint _entryPoint, IOracle _oracle, address _owner)
         BasePaymaster(_entryPoint)
     {
         token = _token;
@@ -45,7 +45,7 @@ contract PimlicoERC20Paymaster is BasePaymaster {
         priceMarkup = 110e4; // 110%  1e6 = 100%
         priceUpdateThreshold = 25e3; // 2.5%  1e6 = 100%
         transferOwnership(_owner);
-        tokenDecimals = 10 ** _decimals;
+        tokenDecimals = 10 ** _token.decimals();
     }
 
     /// @notice Updates the price markup and price update threshold configurations.

@@ -34,13 +34,12 @@ contract PimlicoERC20Paymaster18Test is Test {
         paymasterOperator = makeAddr("paymasterOperator");
         (user, userKey) = makeAddrAndKey("user");
         entryPoint = new EntryPoint();
-        token = new TestERC20();
+        token = new TestERC20(18);
         oracle = new TestOracle();
         oracle.setPrice(531242748818150);
         accountFactory = new SimpleAccountFactory(entryPoint);
         paymaster = new PimlicoERC20Paymaster(
             token,
-            18,
             entryPoint,
             oracle,
             paymasterOperator
@@ -57,7 +56,6 @@ contract PimlicoERC20Paymaster18Test is Test {
     function testDeploy() external {
         PimlicoERC20Paymaster testArtifact = new PimlicoERC20Paymaster(
             token,
-            6,
             entryPoint,
             oracle,
             paymasterOperator
