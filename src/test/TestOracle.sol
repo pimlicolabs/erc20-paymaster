@@ -3,10 +3,10 @@ pragma solidity ^0.8.0;
 import "../interfaces/IOracle.sol";
 
 contract TestOracle is IOracle {
-    int256 price;
+    int256 public price;
 
     constructor() {
-        price = 554751589071929;
+        price = 100000000;
     }
 
     function setPrice(int256 _price) external {

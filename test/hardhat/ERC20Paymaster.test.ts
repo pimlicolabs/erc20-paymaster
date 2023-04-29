@@ -28,7 +28,7 @@ import { hexConcat, parseEther, hexZeroPad } from 'ethers/lib/utils'
 describe('EntryPoint with paymaster', function () {
   let entryPoint: EntryPoint
   let accountOwner: Wallet
-  let oracle : TestOracle
+  let nativeAssetOracle : TestOracle
   let account: SimpleAccount
   let factory: SimpleAccountFactory
   const ethersSigner = ethers.provider.getSigner()
@@ -50,8 +50,9 @@ describe('EntryPoint with paymaster', function () {
     before(async () => {
       await checkForGeth();
       token = await new TestERC20__factory(ethersSigner).deploy(6)
-      oracle = await new TestOracle__factory(ethersSigner).deploy()
-      paymaster = await new PimlicoERC20Paymaster__factory(ethersSigner).deploy(token.address, 6, entryPoint.address, oracle.address, await ethersSigner.getAddress())
+      nativeAssetOracle = await new TestOracle__factory(ethersSigner).deploy()
+      const tokenOracle = await new TestOracle__factory(ethersSigner).deploy()
+      paymaster = await new PimlicoERC20Paymaster__factory(ethersSigner).deploy(token.address, entryPoint.address, tokenOracle.address, nativeAssetOracle.address, await ethersSigner.getAddress())
       await token.transfer(paymaster.address, 100);
       await paymaster.updatePrice();
       await entryPoint.depositTo(paymaster.address, { value: parseEther('1000') })
@@ -149,7 +150,7 @@ describe('EntryPoint with paymaster', function () {
             calldata = await account.populateTransaction.execute(accountOwner.address, 0, "0x").then(tx => tx.data!)
             priceData = hexConcat([paymaster.address]);
             let priceOld = await paymaster.previousPrice();
-            await oracle.setPrice(priceOld.mul(103).div(100));
+            await nativeAssetOracle.setPrice(priceOld.mul(103).div(100));
             await token.sudoTransfer(account.address, await ethersSigner.getAddress());
           })
           it('paymaster should reject if account doesn\'t have tokens', async () => {
@@ -192,7 +193,7 @@ describe('EntryPoint with paymaster', function () {
             const price = await paymaster.previousPrice();
             priceData = hexConcat([paymaster.address, hexZeroPad(price.mul(95).div(100).toHexString(), 32)]);
             let priceOld = await paymaster.previousPrice();
-            await oracle.setPrice(priceOld.mul(103).div(100));
+            await nativeAssetOracle.setPrice(priceOld.mul(103).div(100));
             await token.sudoTransfer(account.address, await ethersSigner.getAddress());
           })
           it('paymaster should reject if account doesn\'t have tokens', async () => {

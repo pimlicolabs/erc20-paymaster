@@ -20,7 +20,8 @@ contract PimlicoERC20Paymaster6Test is Test {
     SimpleAccountFactory accountFactory;
     PimlicoERC20Paymaster paymaster;
     TestERC20 token;
-    TestOracle oracle;
+    TestOracle tokenOracle;
+    TestOracle nativeAssetOracle;
     TestCounter counter;
 
     address payable beneficiary;
@@ -35,13 +36,17 @@ contract PimlicoERC20Paymaster6Test is Test {
         (user, userKey) = makeAddrAndKey("user");
         entryPoint = new EntryPoint();
         token = new TestERC20(6);
-        oracle = new TestOracle();
+        tokenOracle = new TestOracle();
+        tokenOracle.setPrice(100000000);
+        nativeAssetOracle = new TestOracle();
+        nativeAssetOracle.setPrice(189933000000);
         accountFactory = new SimpleAccountFactory(entryPoint);
         paymaster = new PimlicoERC20Paymaster(
             token,
             6,
             entryPoint,
-            oracle,
+            tokenOracle,
+            nativeAssetOracle,
             paymasterOperator
         );
         account = accountFactory.createAccount(user, 0);
@@ -59,12 +64,14 @@ contract PimlicoERC20Paymaster6Test is Test {
             token,
             6,
             entryPoint,
-            oracle,
+            tokenOracle,
+            nativeAssetOracle,
             paymasterOperator
         );
         assertEq(address(testArtifact.token()), address(token));
         assertEq(address(testArtifact.entryPoint()), address(entryPoint));
-        assertEq(address(testArtifact.oracle()), address(oracle));
+        assertEq(address(testArtifact.tokenOracle()), address(tokenOracle));
+        assertEq(address(testArtifact.nativeAssetOracle()), address(nativeAssetOracle));
         assertEq(address(testArtifact.owner()), paymasterOperator);
     }
 
@@ -133,11 +140,11 @@ contract PimlicoERC20Paymaster6Test is Test {
     }
 
     function testUpdatePrice(int192 _price) external {
-        vm.assume(_price > 0);
+        vm.assume(_price > 1e8);
         vm.assume(uint192(_price) < type(uint120).max);
-        oracle.setPrice(_price);
+        nativeAssetOracle.setPrice(_price);
         paymaster.updatePrice();
-        assertEq(uint256(paymaster.previousPrice()), uint256(uint192(_price)));
+        assertEq(uint256(paymaster.previousPrice()), uint256(uint192(_price))/1e2);
     }
 
     // sanity check for everything works without paymaster
@@ -222,7 +229,7 @@ contract PimlicoERC20Paymaster6Test is Test {
     function testERC20PaymasterUpdatePriceUp() external {
         paymaster.updatePrice();
         uint256 prevPrice = paymaster.previousPrice();
-        oracle.setPrice(int256(prevPrice) * 111 / 100);
+        nativeAssetOracle.setPrice(int256(nativeAssetOracle.price()) * 111 / 100);
         vm.deal(address(account), 1e18);
         token.sudoMint(address(account), 1000e6); // 1000 usdc;
         token.sudoMint(address(paymaster), 1); // 1000 usdc;
@@ -240,7 +247,7 @@ contract PimlicoERC20Paymaster6Test is Test {
     function testERC20PaymasterUpdatePriceDown() external {
         paymaster.updatePrice();
         uint256 prevPrice = paymaster.previousPrice();
-        oracle.setPrice(int256(prevPrice) * 89 / 100);
+        nativeAssetOracle.setPrice(int256(nativeAssetOracle.price()) * 89 / 100);
         vm.deal(address(account), 1e18);
         token.sudoMint(address(account), 1000e6); // 1000 usdc;
         token.sudoMint(address(paymaster), 1); // 1000 usdc;
