@@ -22,7 +22,7 @@ contract PimlicoERC20Paymaster is BasePaymaster {
     uint256 public constant priceDenominator = 1e6;
     uint256 public constant REFUND_POSTOP_COST = 40000; // Estimated gas cost for refunding tokens after the transaction is completed
 
-    // The token, tokenOracle, and nativeAssetOracle are declared as immutable, 
+    // The token, tokenOracle, and nativeAssetOracle are declared as immutable,
     // meaning their values cannot change after contract creation.
     IERC20 public immutable token; // The ERC20 token used for transaction fee payments
     uint256 public immutable tokenDecimals;
@@ -102,12 +102,16 @@ contract PimlicoERC20Paymaster is BasePaymaster {
             uint256 length = userOp.paymasterAndData.length - 20;
             // 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffdf is the mask for the last 6 bits 011111 which mean length should be 100000(32) || 000000(0)
             require(
-                length & 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffdf == 0, "PP-ERC20 : invalid data length"
+                length & 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffdf == 0,
+                "PP-ERC20 : invalid data length"
             );
+            // NOTE: we assumed that nativeAsset's decimals is 18, if there is any nativeAsset with different decimals, need to change the 1e18 to the correct decimals
             uint256 tokenAmount = (requiredPreFund + (REFUND_POSTOP_COST) * userOp.maxFeePerGas) * priceMarkup
                 * cachedPrice / (1e18 * priceDenominator);
             if (length == 32) {
-                require(tokenAmount <= uint256(bytes32(userOp.paymasterAndData[20:52])), "PP-ERC20 : token amount too high");
+                require(
+                    tokenAmount <= uint256(bytes32(userOp.paymasterAndData[20:52])), "PP-ERC20 : token amount too high"
+                );
             }
             SafeTransferLib.safeTransferFrom(address(token), userOp.sender, address(this), tokenAmount);
             context = abi.encodePacked(tokenAmount, userOp.sender);
@@ -139,6 +143,7 @@ contract PimlicoERC20Paymaster is BasePaymaster {
                 cachedPrice = uint192(int192(price));
             }
             // Refund tokens based on actual gas cost
+            // NOTE: we assumed that nativeAsset's decimals is 18, if there is any nativeAsset with different decimals, need to change the 1e18 to the correct decimals
             uint256 actualTokenNeeded = (actualGasCost + REFUND_POSTOP_COST * tx.gasprice) * priceMarkup * cachedPrice
                 / (1e18 * priceDenominator); // We use tx.gasprice here since we don't know the actual gas price used by the user
             if (uint256(bytes32(context[0:32])) > actualTokenNeeded) {

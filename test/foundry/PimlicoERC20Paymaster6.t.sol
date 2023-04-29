@@ -203,7 +203,9 @@ contract PimlicoERC20Paymaster6Test is Test {
         UserOperation[] memory ops = new UserOperation[](1);
         ops[0] = op;
         vm.expectRevert(
-            abi.encodeWithSelector(IEntryPoint.FailedOp.selector, uint256(0), "AA33 reverted: PP-ERC20 : token amount too high")
+            abi.encodeWithSelector(
+                IEntryPoint.FailedOp.selector, uint256(0), "AA33 reverted: PP-ERC20 : token amount too high"
+            )
         );
         entryPoint.handleOps(ops, beneficiary);
     }
@@ -221,7 +223,9 @@ contract PimlicoERC20Paymaster6Test is Test {
         UserOperation[] memory ops = new UserOperation[](1);
         ops[0] = op;
         vm.expectRevert(
-            abi.encodeWithSelector(IEntryPoint.FailedOp.selector, uint256(0), "AA33 reverted: PP-ERC20 : invalid data length")
+            abi.encodeWithSelector(
+                IEntryPoint.FailedOp.selector, uint256(0), "AA33 reverted: PP-ERC20 : invalid data length"
+            )
         );
         entryPoint.handleOps(ops, beneficiary);
     }
