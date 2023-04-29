@@ -2,15 +2,14 @@
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 contract TestERC20 is ERC20 {
-    uint8 immutable private __decimals;
+    uint8 private immutable __decimals;
 
     constructor(uint8 _decimals) ERC20("TestERC20", "T20") {
         _mint(msg.sender, 1000000000000000000000000);
         __decimals = _decimals;
     }
 
-    function decimals() public view override returns(uint8)
-    {
+    function decimals() public view override returns (uint8) {
         return __decimals;
     }
 

@@ -144,7 +144,7 @@ contract PimlicoERC20Paymaster6Test is Test {
         vm.assume(uint192(_price) < type(uint120).max);
         nativeAssetOracle.setPrice(_price);
         paymaster.updatePrice();
-        assertEq(uint256(paymaster.previousPrice()), uint256(uint192(_price))/1e2);
+        assertEq(uint256(paymaster.previousPrice()), uint256(uint192(_price)) / 1e2);
     }
 
     // sanity check for everything works without paymaster

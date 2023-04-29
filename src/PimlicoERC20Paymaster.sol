@@ -38,9 +38,15 @@ contract PimlicoERC20Paymaster is BasePaymaster {
     /// @param _token The ERC20 token used for transaction fee payments.
     /// @param _entryPoint The EntryPoint contract used in the Account Abstraction infrastructure.
     /// @param _tokenOracle The Oracle contract used to fetch the latest token prices.
-    constructor(IERC20Metadata _token, IEntryPoint _entryPoint, IOracle _tokenOracle, IOracle _ethOracle, address _owner) BasePaymaster(_entryPoint) {
+    constructor(
+        IERC20Metadata _token,
+        IEntryPoint _entryPoint,
+        IOracle _tokenOracle,
+        IOracle _ethOracle,
+        address _owner
+    ) BasePaymaster(_entryPoint) {
         token = _token;
-        tokenOracle= _tokenOracle; // oracle for token -> usd
+        tokenOracle = _tokenOracle; // oracle for token -> usd
         nativeAssetOracle = _ethOracle; // oracle for eth -> usd
         priceMarkup = 110e4; // 110%  1e6 = 100%
         priceUpdateThreshold = 25e3; // 2.5%  1e6 = 100%
@@ -93,8 +99,8 @@ contract PimlicoERC20Paymaster is BasePaymaster {
             require(
                 length & 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffdf == 0, "invalid data length"
             );
-            uint256 tokenAmount = (requiredPreFund + (REFUND_POSTOP_COST) * userOp.maxFeePerGas)
-                * priceMarkup * cachedPrice /  (1e18*priceDenominator);
+            uint256 tokenAmount = (requiredPreFund + (REFUND_POSTOP_COST) * userOp.maxFeePerGas) * priceMarkup
+                * cachedPrice / (1e18 * priceDenominator);
             if (length == 32) {
                 require(tokenAmount <= uint256(bytes32(userOp.paymasterAndData[20:52])), "token amount too high");
             }
@@ -114,11 +120,11 @@ contract PimlicoERC20Paymaster is BasePaymaster {
             return; // Do nothing here to not revert the whole bundle and harm reputatokenOracle
         }
         unchecked {
-        uint192 tokenPrice = fetchPrice(tokenOracle);
-        uint192 ethPrice = fetchPrice(nativeAssetOracle);
-        uint256 cachedPrice = previousPrice;
-        uint192 price = ethPrice * uint192(tokenDecimals) / tokenPrice;
-        uint256 cachedUpdateThreshold = priceUpdateThreshold;
+            uint192 tokenPrice = fetchPrice(tokenOracle);
+            uint192 ethPrice = fetchPrice(nativeAssetOracle);
+            uint256 cachedPrice = previousPrice;
+            uint192 price = ethPrice * uint192(tokenDecimals) / tokenPrice;
+            uint256 cachedUpdateThreshold = priceUpdateThreshold;
             if (
                 uint256(price) * priceDenominator / cachedPrice > priceDenominator + cachedUpdateThreshold
                     || uint256(price) * priceDenominator / cachedPrice < priceDenominator - cachedUpdateThreshold
@@ -127,8 +133,8 @@ contract PimlicoERC20Paymaster is BasePaymaster {
                 cachedPrice = uint192(int192(price));
             }
             // Refund tokens based on actual gas cost
-            uint256 actualTokenNeeded =
-                (actualGasCost + REFUND_POSTOP_COST * tx.gasprice) * priceMarkup * cachedPrice /  (1e18*priceDenominator); // We use tx.gasprice here since we don't know the actual gas price used by the user
+            uint256 actualTokenNeeded = (actualGasCost + REFUND_POSTOP_COST * tx.gasprice) * priceMarkup * cachedPrice
+                / (1e18 * priceDenominator); // We use tx.gasprice here since we don't know the actual gas price used by the user
             if (uint256(bytes32(context[0:32])) > actualTokenNeeded) {
                 // If the initially provided token amount is greater than the actual amount needed, refund the difference
                 SafeTransferLib.safeTransfer(address(token), address(bytes20(context[32:52])), uint256(bytes32(context[0:32])) - actualTokenNeeded);
@@ -138,11 +144,11 @@ contract PimlicoERC20Paymaster is BasePaymaster {
         }
     }
 
-    function fetchPrice(IOracle _oracle) internal view returns(uint192 price) {
+    function fetchPrice(IOracle _oracle) internal view returns (uint192 price) {
         (uint80 roundId, int256 answer,, uint256 updatedAt, uint80 answeredInRound) = _oracle.latestRoundData();
 
         require(answer > 0, "Chainlink price <= 0");
-        require(updatedAt >= block.timestamp - 60*60*24*2, "Incomplete round");
+        require(updatedAt >= block.timestamp - 60 * 60 * 24 * 2, "Incomplete round");
         require(answeredInRound >= roundId, "Stale price");
         price = uint192(int192(answer));
     }
