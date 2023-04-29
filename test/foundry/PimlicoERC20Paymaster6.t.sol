@@ -97,7 +97,7 @@ contract PimlicoERC20Paymaster6Test is Test {
         _priceMarkup = uint32(bound(_priceMarkup, 0, 1e6 - 1)); // 100% - 120%
         _updateThreshold = uint32(bound(_updateThreshold, 0, _priceMarkup));
         vm.startPrank(paymasterOperator);
-        vm.expectRevert("price markeup too low");
+        vm.expectRevert("PP-ERC20 : price markeup too low");
         paymaster.updateConfig(_priceMarkup, _updateThreshold);
         vm.stopPrank();
     }
@@ -106,7 +106,7 @@ contract PimlicoERC20Paymaster6Test is Test {
         _priceMarkup = uint32(bound(_priceMarkup, 12e5 + 1, type(uint32).max)); // 100% - 120%
         _updateThreshold = uint32(bound(_updateThreshold, 0, _priceMarkup));
         vm.startPrank(paymasterOperator);
-        vm.expectRevert("price markup too high");
+        vm.expectRevert("PP-ERC20 : price markup too high");
         paymaster.updateConfig(_priceMarkup, _updateThreshold);
         vm.stopPrank();
     }
@@ -115,7 +115,7 @@ contract PimlicoERC20Paymaster6Test is Test {
         _priceMarkup = uint32(bound(_priceMarkup, 1e6, 12e5)); // 100% - 120%
         _updateThreshold = uint32(bound(_updateThreshold, 1e6 + 1, type(uint32).max));
         vm.startPrank(paymasterOperator);
-        vm.expectRevert("update threshold too high");
+        vm.expectRevert("PP-ERC20 : update threshold too high");
         paymaster.updateConfig(_priceMarkup, _updateThreshold);
         vm.stopPrank();
     }
@@ -203,7 +203,7 @@ contract PimlicoERC20Paymaster6Test is Test {
         UserOperation[] memory ops = new UserOperation[](1);
         ops[0] = op;
         vm.expectRevert(
-            abi.encodeWithSelector(IEntryPoint.FailedOp.selector, uint256(0), "AA33 reverted: token amount too high")
+            abi.encodeWithSelector(IEntryPoint.FailedOp.selector, uint256(0), "AA33 reverted: PP-ERC20 : token amount too high")
         );
         entryPoint.handleOps(ops, beneficiary);
     }
@@ -221,7 +221,7 @@ contract PimlicoERC20Paymaster6Test is Test {
         UserOperation[] memory ops = new UserOperation[](1);
         ops[0] = op;
         vm.expectRevert(
-            abi.encodeWithSelector(IEntryPoint.FailedOp.selector, uint256(0), "AA33 reverted: invalid data length")
+            abi.encodeWithSelector(IEntryPoint.FailedOp.selector, uint256(0), "AA33 reverted: PP-ERC20 : invalid data length")
         );
         entryPoint.handleOps(ops, beneficiary);
     }
@@ -274,7 +274,7 @@ contract PimlicoERC20Paymaster6Test is Test {
         UserOperation[] memory ops = new UserOperation[](1);
         ops[0] = op;
         vm.expectRevert(
-            abi.encodeWithSelector(IEntryPoint.FailedOp.selector, uint256(0), "AA33 reverted: price not set")
+            abi.encodeWithSelector(IEntryPoint.FailedOp.selector, uint256(0), "AA33 reverted: PP-ERC20 : price not set")
         );
         entryPoint.handleOps(ops, beneficiary);
     }
