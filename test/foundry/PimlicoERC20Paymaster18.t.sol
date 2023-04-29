@@ -76,7 +76,7 @@ contract PimlicoERC20Paymaster18Test is Test {
 
     function testUpdateConfigSuccess(uint32 _priceMarkup, uint32 _updateThreshold) external {
         _priceMarkup = uint32(bound(_priceMarkup, 1e6, 12e5)); // 100% - 120%
-        _updateThreshold = uint32(bound(_updateThreshold, 0, _priceMarkup));
+        _updateThreshold = uint32(bound(_updateThreshold, 0, 1e6));
         vm.startPrank(paymasterOperator);
         paymaster.updateConfig(_priceMarkup, _updateThreshold);
         assertEq(paymaster.priceMarkup(), _priceMarkup);
