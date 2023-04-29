@@ -42,12 +42,12 @@ contract PimlicoERC20Paymaster is BasePaymaster {
         IERC20Metadata _token,
         IEntryPoint _entryPoint,
         IOracle _tokenOracle,
-        IOracle _ethOracle,
+        IOracle _nativeAssetOracle,
         address _owner
     ) BasePaymaster(_entryPoint) {
         token = _token;
         tokenOracle = _tokenOracle; // oracle for token -> usd
-        nativeAssetOracle = _ethOracle; // oracle for eth -> usd
+        nativeAssetOracle = _nativeAssetOracle; // oracle for eth -> usd
         priceMarkup = 110e4; // 110%  1e6 = 100%
         priceUpdateThreshold = 25e3; // 2.5%  1e6 = 100%
         transferOwnership(_owner);
