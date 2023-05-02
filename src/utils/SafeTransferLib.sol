@@ -66,7 +66,7 @@ library SafeTransferLib {
                 // Store the function selector of `TransferFromFailed()`.
                 mstore(0x00, 0x7939f424)
                 // Revert with (offset, size).
-                revert(0x1c, 0x20)
+                revert(0x00, 0x20)
             }
 
             mstore(0x60, 0) // Restore the zero slot to zero.
@@ -100,7 +100,7 @@ library SafeTransferLib {
                 // Store the function selector of `TransferFromFailed()`.
                 mstore(0x00, 0x7939f424)
                 // Revert with (offset, size).
-                revert(0x1c, 0x20)
+                revert(0x00, 0x20)
             }
 
             // Store the function selector of `transferFrom(address,address,uint256)`.
@@ -119,7 +119,7 @@ library SafeTransferLib {
                 // Store the function selector of `TransferFromFailed()`.
                 mstore(0x00, 0x7939f424)
                 // Revert with (offset, size).
-                revert(0x1c, 0x20)
+                revert(0x00, 0x20)
             }
 
             mstore(0x60, 0) // Restore the zero slot to zero.
@@ -148,7 +148,7 @@ library SafeTransferLib {
                 // Store the function selector of `TransferFailed()`.
                 mstore(0x00, 0x90b8ec18)
                 // Revert with (offset, size).
-                revert(0x1c, 0x20)
+                revert(0x00, 0x20)
             }
             // Restore the part of the free memory pointer that was overwritten.
             mstore(0x34, 0)
@@ -171,7 +171,7 @@ library SafeTransferLib {
                 // Store the function selector of `TransferFailed()`.
                 mstore(0x00, 0x90b8ec18)
                 // Revert with (offset, size).
-                revert(0x1c, 0x20)
+                revert(0x00, 0x20)
             }
 
             mstore(0x14, to) // Store the `to` argument.
@@ -191,7 +191,7 @@ library SafeTransferLib {
                 // Store the function selector of `TransferFailed()`.
                 mstore(0x00, 0x90b8ec18)
                 // Revert with (offset, size).
-                revert(0x1c, 0x20)
+                revert(0x00, 0x20)
             }
             // Restore the part of the free memory pointer that was overwritten.
             mstore(0x34, 0)
@@ -219,7 +219,7 @@ library SafeTransferLib {
                 // Store the function selector of `ApproveFailed()`.
                 mstore(0x00, 0x3e3f8f73)
                 // Revert with (offset, size).
-                revert(0x1c, 0x20)
+                revert(0x00, 0x20)
             }
             // Restore the part of the free memory pointer that was overwritten.
             mstore(0x34, 0)
