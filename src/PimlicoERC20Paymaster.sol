@@ -57,6 +57,8 @@ contract PimlicoERC20Paymaster is BasePaymaster {
         priceUpdateThreshold = 25e3; // 2.5%  1e6 = 100%
         transferOwnership(_owner);
         tokenDecimals = 10 ** _token.decimals();
+        require(_tokenOracle.decimals() == 8, "PP-ERC20 : token oracle decimals must be 8");
+        require(_nativeAssetOracle.decimals() == 8, "PP-ERC20 : native asset oracle decimals must be 8");
     }
 
     /// @notice Updates the price markup and price update threshold configurations.
