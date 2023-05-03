@@ -15,7 +15,7 @@ using ECDSA for bytes32;
 
 import "./BytesLib.sol";
 
-contract PimlicoERC20PaymasterTest is Test {
+contract PimlicoERC20Paymaster6Test is Test {
     EntryPoint entryPoint;
     SimpleAccountFactory accountFactory;
     PimlicoERC20Paymaster paymaster;
@@ -34,7 +34,7 @@ contract PimlicoERC20PaymasterTest is Test {
         paymasterOperator = makeAddr("paymasterOperator");
         (user, userKey) = makeAddrAndKey("user");
         entryPoint = new EntryPoint();
-        token = new TestERC20();
+        token = new TestERC20(6);
         oracle = new TestOracle();
         accountFactory = new SimpleAccountFactory(entryPoint);
         paymaster = new PimlicoERC20Paymaster(
