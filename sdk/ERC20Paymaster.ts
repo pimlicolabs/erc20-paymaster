@@ -131,8 +131,7 @@ export async function deployERC20Paymaster(
             constructorBytecode
         ])
     }
-    const txString = await options.deployer.signTransaction(tx)
-    const txResponse = await provider.sendTransaction(txString)
+    const txResponse = await options.deployer.sendTransaction(tx)
     const receipt = await txResponse.wait()
     if (receipt.status === 0) {
         throw new Error(`ERC20Paymaster deployment failed: ${receipt.transactionHash}`)

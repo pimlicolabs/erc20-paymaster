@@ -22,8 +22,10 @@ import {
   deployEntryPoint,
   createAccount,
 } from './testutils'
-import { fillAndSign } from './UserOp'
 import { hexConcat, parseEther, hexZeroPad } from 'ethers/lib/utils'
+
+import { fillAndSign, fillUserOp, signUserOp } from './UserOp'
+import { ERC20, ERC20Paymaster, deployERC20Paymaster } from "../../sdk"
 
 describe('EntryPoint with paymaster', function () {
   let entryPoint: EntryPoint
@@ -31,6 +33,7 @@ describe('EntryPoint with paymaster', function () {
   let nativeAssetOracle : TestOracle
   let account: SimpleAccount
   let factory: SimpleAccountFactory
+  let sdk : ERC20Paymaster
   const ethersSigner = ethers.provider.getSigner()
   const beneficiaryAddress = '0x'.padEnd(42, '1')
 
@@ -52,7 +55,17 @@ describe('EntryPoint with paymaster', function () {
       token = await new TestERC20__factory(ethersSigner).deploy(6)
       nativeAssetOracle = await new TestOracle__factory(ethersSigner).deploy()
       const tokenOracle = await new TestOracle__factory(ethersSigner).deploy()
-      paymaster = await new PimlicoERC20Paymaster__factory(ethersSigner).deploy(token.address, entryPoint.address, tokenOracle.address, nativeAssetOracle.address, await ethersSigner.getAddress())
+      sdk = await deployERC20Paymaster(accountOwner.provider, ERC20.DAI, {
+        entrypoint: entryPoint.address,
+        tokenAddress: token.address,
+        tokenOracle: tokenOracle.address,
+        nativeAssetOracle: nativeAssetOracle.address,
+        nativeAsset: "ETH",
+        owner: await ethersSigner.getAddress(),
+        deployer: ethersSigner,
+      });
+      paymaster = PimlicoERC20Paymaster__factory.connect(sdk.paymasterContract.address, ethersSigner);
+
       await token.transfer(paymaster.address, 100);
       await paymaster.updatePrice();
       await entryPoint.depositTo(paymaster.address, { value: parseEther('1000') })
@@ -70,11 +83,14 @@ describe('EntryPoint with paymaster', function () {
             await token.sudoTransfer(account.address, await ethersSigner.getAddress());
           })
           it('paymaster should reject if account doesn\'t have tokens', async () => {
-            const op = await fillAndSign({
+            let op = await fillUserOp({
               sender: account.address,
               paymasterAndData: priceData,
               callData: calldata
-            }, accountOwner, entryPoint)
+            }, entryPoint)
+            const paymasterAndData = await sdk.generatePaymasterAndData(op);
+            op.paymasterAndData = paymasterAndData;
+            op = signUserOp(op, accountOwner, entryPoint.address, (await accountOwner.provider.getNetwork()).chainId);
             await expect(entryPoint.callStatic.handleOps([op], beneficiaryAddress, {
               gasLimit: 1e7
             })).to.revertedWith('FailedOp')
@@ -86,11 +102,14 @@ describe('EntryPoint with paymaster', function () {
             await token.transfer(account.address, await token.balanceOf(await ethersSigner.getAddress()));
             await token.sudoApprove(account.address, paymaster.address, ethers.constants.MaxUint256);
 
-            const op = await fillAndSign({
+            let op = await fillUserOp({
               sender: account.address,
               paymasterAndData: priceData,
               callData: calldata
-            }, accountOwner, entryPoint)
+            }, entryPoint)
+            const paymasterAndData = await sdk.generatePaymasterAndData(op);
+            op.paymasterAndData = paymasterAndData;
+            op = signUserOp(op, accountOwner, entryPoint.address, (await accountOwner.provider.getNetwork()).chainId);
             await entryPoint.callStatic.handleOps([op], beneficiaryAddress, {
               gasLimit: 1e7
             })
@@ -111,11 +130,14 @@ describe('EntryPoint with paymaster', function () {
             await token.sudoTransfer(account.address, await ethersSigner.getAddress());
           })
           it('paymaster should reject if account doesn\'t have tokens', async () => {
-            const op = await fillAndSign({
+            let op = await fillUserOp({
               sender: account.address,
               paymasterAndData: priceData,
               callData: calldata
-            }, accountOwner, entryPoint)
+            }, entryPoint)
+            const paymasterAndData = await sdk.generatePaymasterAndData(op);
+            op.paymasterAndData = paymasterAndData;
+            op = signUserOp(op, accountOwner, entryPoint.address, (await accountOwner.provider.getNetwork()).chainId);
             await expect(entryPoint.callStatic.handleOps([op], beneficiaryAddress, {
               gasLimit: 1e7
             })).to.revertedWith('FailedOp')
@@ -127,11 +149,14 @@ describe('EntryPoint with paymaster', function () {
             await token.transfer(account.address, await token.balanceOf(await ethersSigner.getAddress()));
             await token.sudoApprove(account.address, paymaster.address, ethers.constants.MaxUint256);
 
-            const op = await fillAndSign({
+            let op = await fillUserOp({
               sender: account.address,
               paymasterAndData: priceData,
               callData: calldata
-            }, accountOwner, entryPoint)
+            }, entryPoint)
+            const paymasterAndData = await sdk.generatePaymasterAndData(op);
+            op.paymasterAndData = paymasterAndData;
+            op = signUserOp(op, accountOwner, entryPoint.address, (await accountOwner.provider.getNetwork()).chainId);
             await entryPoint.callStatic.handleOps([op], beneficiaryAddress, {
               gasLimit: 1e7
             })
@@ -154,11 +179,14 @@ describe('EntryPoint with paymaster', function () {
             await token.sudoTransfer(account.address, await ethersSigner.getAddress());
           })
           it('paymaster should reject if account doesn\'t have tokens', async () => {
-            const op = await fillAndSign({
+            let op = await fillUserOp({
               sender: account.address,
               paymasterAndData: priceData,
               callData: calldata
-            }, accountOwner, entryPoint)
+            }, entryPoint)
+            const paymasterAndData = await sdk.generatePaymasterAndData(op);
+            op.paymasterAndData = paymasterAndData;
+            op = signUserOp(op, accountOwner, entryPoint.address, (await accountOwner.provider.getNetwork()).chainId);
             await expect(entryPoint.callStatic.handleOps([op], beneficiaryAddress, {
               gasLimit: 1e7
             })).to.revertedWith('FailedOp')
@@ -170,11 +198,14 @@ describe('EntryPoint with paymaster', function () {
             await token.transfer(account.address, await token.balanceOf(await ethersSigner.getAddress()));
             await token.sudoApprove(account.address, paymaster.address, ethers.constants.MaxUint256);
 
-            const op = await fillAndSign({
+            let op = await fillUserOp({
               sender: account.address,
               paymasterAndData: priceData,
               callData: calldata
-            }, accountOwner, entryPoint)
+            }, entryPoint)
+            const paymasterAndData = await sdk.generatePaymasterAndData(op);
+            op.paymasterAndData = paymasterAndData;
+            op = signUserOp(op, accountOwner, entryPoint.address, (await accountOwner.provider.getNetwork()).chainId);
             await entryPoint.callStatic.handleOps([op], beneficiaryAddress, {
               gasLimit: 1e7
             })
@@ -197,11 +228,14 @@ describe('EntryPoint with paymaster', function () {
             await token.sudoTransfer(account.address, await ethersSigner.getAddress());
           })
           it('paymaster should reject if account doesn\'t have tokens', async () => {
-            const op = await fillAndSign({
+            let op = await fillUserOp({
               sender: account.address,
               paymasterAndData: priceData,
               callData: calldata
-            }, accountOwner, entryPoint)
+            }, entryPoint)
+            const paymasterAndData = await sdk.generatePaymasterAndData(op);
+            op.paymasterAndData = paymasterAndData;
+            op = signUserOp(op, accountOwner, entryPoint.address, (await accountOwner.provider.getNetwork()).chainId);
             await expect(entryPoint.callStatic.handleOps([op], beneficiaryAddress, {
               gasLimit: 1e7
             })).to.revertedWith('FailedOp')
@@ -213,11 +247,14 @@ describe('EntryPoint with paymaster', function () {
             await token.transfer(account.address, await token.balanceOf(await ethersSigner.getAddress()));
             await token.sudoApprove(account.address, paymaster.address, ethers.constants.MaxUint256);
 
-            const op = await fillAndSign({
+            let op = await fillUserOp({
               sender: account.address,
               paymasterAndData: priceData,
               callData: calldata
-            }, accountOwner, entryPoint)
+            }, entryPoint)
+            const paymasterAndData = await sdk.generatePaymasterAndData(op);
+            op.paymasterAndData = paymasterAndData;
+            op = signUserOp(op, accountOwner, entryPoint.address, (await accountOwner.provider.getNetwork()).chainId);
             await entryPoint.callStatic.handleOps([op], beneficiaryAddress, {
               gasLimit: 1e7
             })
