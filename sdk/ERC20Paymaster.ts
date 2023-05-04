@@ -202,6 +202,9 @@ export class ERC20Paymaster {
     async calculateTokenAmount(userOp: NotPromise<UserOperationStruct>): Promise<BigNumber> {
         const priceMarkup = await this.paymasterContract.priceMarkup()
         const cachedPrice = await this.paymasterContract.previousPrice()
+        if(cachedPrice.eq(0)){
+          throw new Error("ERC20Paymaster: no previous price set")
+        }
 
         const requiredPreFund = BigNumber.from(userOp.preVerificationGas)
             .add(BigNumber.from(userOp.verificationGasLimit).mul(3)) // 3 is for buffer when using paymaster

@@ -4,8 +4,7 @@ import {
   hexDataSlice,
   keccak256
 } from 'ethers/lib/utils'
-import { BigNumber, Contract, Signer, Wallet } from 'ethers'
-import { AddressZero, callDataCost, rethrow } from './testutils'
+import { BigNumber, Contract, Signer, Wallet, constants, utils } from 'ethers'
 import { ecsign, toRpcSig, keccak256 as keccak256_buffer } from 'ethereumjs-util'
 import {
   EntryPoint
@@ -69,7 +68,7 @@ export function getUserOpHash (op: UserOperation, entryPoint: string, chainId: n
 }
 
 export const DefaultsForUserOp: UserOperation = {
-  sender: AddressZero,
+  sender: constants.AddressZero,
   nonce: 0,
   initCode: '0x',
   callData: '0x',
@@ -201,5 +200,39 @@ export async function fillAndSign (op: Partial<UserOperation>, signer: Wallet | 
   return {
     ...op2,
     signature: await signer.signMessage(message)
+  }
+}
+
+export function callDataCost(data:string): number {
+  return utils.arrayify(data)
+    .map(x => x === 0 ? 4 : 16)
+    .reduce((sum, x) => sum + x)
+}
+
+// rethrow "cleaned up" exception.
+// - stack trace goes back to method (or catch) line, not inner provider
+// - attempt to parse revert data (needed for geth)
+// use with ".catch(rethrow())", so that current source file/line is meaningful.
+export function rethrow (): (e: Error) => void {
+  const callerStack = new Error().stack!.replace(/Error.*\n.*at.*\n/, '').replace(/.*at.* \(internal[\s\S]*/, '')
+
+  if (arguments[0] != null) {
+    throw new Error('must use .catch(rethrow()), and NOT .catch(rethrow)')
+  }
+  return function (e: Error) {
+    const solstack = e.stack!.match(/((?:.* at .*\.sol.*\n)+)/)
+    const stack = (solstack != null ? solstack[1] : '') + callerStack
+    // const regex = new RegExp('error=.*"data":"(.*?)"').compile()
+    const found = /error=.*?"data":"(.*?)"/.exec(e.message)
+    let message: string
+    if (found != null) {
+      const data = found[1]
+      message = decodeRevertReason(data) ?? e.message + ' - ' + data.slice(0, 100)
+    } else {
+      message = e.message
+    }
+    const err = new Error(message)
+    err.stack = 'Error: ' + message + '\n' + stack
+    throw err
   }
 }
