@@ -140,6 +140,23 @@ export async function deployERC20Paymaster(
     return new ERC20Paymaster(provider, await calculateERC20PaymasterAddress(parsedOptions))
 }
 
+export async function getERC20Paymaster(
+    provider: providers.Provider,
+    erc20: ERC20,
+    options?: ERC20PaymasterBuildOptions
+): Promise<ERC20Paymaster> {
+    const parsedOptions = await validatePaymasterOptions(provider, erc20, options)
+
+    if (options?.deployer === undefined) {
+        throw new Error("Deployer must be provided")
+    }
+    const address = await calculateERC20PaymasterAddress(parsedOptions)
+    if((await provider.getCode(address)).length <= 2){
+      throw new Error(`ERC20Paymaster not deployed at ${address}`)
+    }
+    return new ERC20Paymaster(provider, address)
+}
+
 export async function calculateERC20PaymasterAddress(
     options: Required<Omit<Omit<ERC20PaymasterBuildOptions, "nativeAsset">, "deployer">>
 ): Promise<string> {
