@@ -37,7 +37,7 @@ export class ERC20ApprovalError extends Error {
 
 async function validatePaymasterOptions(
     provider: providers.Provider,
-    erc20: ERC20,
+    erc20: ERC20 | string,
     options?: ERC20PaymasterBuildOptions
 ): Promise<Required<Omit<ERC20PaymasterBuildOptions, "deployer">>> {
     const parsedOptions = options ?? {}
@@ -140,19 +140,37 @@ export async function deployERC20Paymaster(
     return new ERC20Paymaster(provider, await calculateERC20PaymasterAddress(parsedOptions))
 }
 
+/**
+ *
+ * @param provider provider to use
+ * @param erc20 ERC20 token to use
+ * @param options (optional) options to use to calculate the deterministic address
+ * @returns the ERC20Paymaster object
+ */
 export async function getERC20Paymaster(
     provider: providers.Provider,
-    erc20: ERC20,
-    options?: ERC20PaymasterBuildOptions
+    erc20: ERC20 | string,
+    options?: Omit<Omit<ERC20PaymasterBuildOptions, "nativeAsset">, "deployer">
 ): Promise<ERC20Paymaster> {
-    const parsedOptions = await validatePaymasterOptions(provider, erc20, options)
+    let parsedOptions: Required<Omit<Omit<ERC20PaymasterBuildOptions, "nativeAsset">, "deployer">>
 
-    if (options?.deployer === undefined) {
-        throw new Error("Deployer must be provided")
+    if (options === undefined) {
+        const chainId = (await provider.getNetwork()).chainId
+
+        parsedOptions = {
+            entrypoint: "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789",
+            nativeAssetOracle: ORACLE_ADDRESS[chainId][NATIVE_ASSET[chainId]],
+            tokenAddress: TOKEN_ADDRESS[chainId][erc20],
+            tokenOracle: ORACLE_ADDRESS[chainId][erc20],
+            owner: "0x4337000c2828f5260d8921fd25829f606b9e8680" // pimlico address
+        }
+    } else {
+        parsedOptions = await validatePaymasterOptions(provider, erc20, options)
     }
+
     const address = await calculateERC20PaymasterAddress(parsedOptions)
-    if((await provider.getCode(address)).length <= 2){
-      throw new Error(`ERC20Paymaster not deployed at ${address}`)
+    if ((await provider.getCode(address)).length <= 2) {
+        throw new Error(`ERC20Paymaster not deployed at ${address}`)
     }
     return new ERC20Paymaster(provider, address)
 }
@@ -202,8 +220,8 @@ export class ERC20Paymaster {
     async calculateTokenAmount(userOp: NotPromise<UserOperationStruct>): Promise<BigNumber> {
         const priceMarkup = await this.paymasterContract.priceMarkup()
         const cachedPrice = await this.paymasterContract.previousPrice()
-        if(cachedPrice.eq(0)){
-          throw new Error("ERC20Paymaster: no previous price set")
+        if (cachedPrice.eq(0)) {
+            throw new Error("ERC20Paymaster: no previous price set")
         }
 
         const requiredPreFund = BigNumber.from(userOp.preVerificationGas)
