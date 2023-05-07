@@ -79,10 +79,7 @@ library SafeTransferLib {
     ///
     /// The `from` account must have at least `amount` approved for
     /// the current contract to manage.
-    function safeTransferAllFrom(address token, address from, address to)
-        internal
-        returns (uint256 amount)
-    {
+    function safeTransferAllFrom(address token, address from, address to) internal returns (uint256 amount) {
         /// @solidity memory-safe-assembly
         assembly {
             let m := mload(0x40) // Cache the free memory pointer.

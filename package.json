@@ -1,15 +1,20 @@
 {
-  "name": "pimlico-erc20paymaster-contracts",
+  "name": "@pimlico/erc20-paymaster",
+  "version": "0.0.1",
+  "description": "A permissionless ERC20 Paymaster implementation by Pimlico",
   "dependencies": {
     "@account-abstraction/contracts": "^0.6.0",
+    "@account-abstraction/utils": "^0.5.0",
+    "@ethersproject/abstract-provider": "^5.7.0",
+    "@ethersproject/providers": "^5.7.2",
     "@openzeppelin/contracts": "^4.8.2",
-    "axios": "^1.3.4",
+    "ethers": "^5.7.2",
     "hardhat": "^2.13.0",
-    "solady": "^0.0.90",
-    "solidity-coverage": "^0.8.2"
+    "solady": "^0.0.90"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-foundry": "^1.0.0",
+    "@nomicfoundation/hardhat-verify": "^1.0.0",
     "@nomiclabs/hardhat-ethers": "^2.2.2",
     "@nomiclabs/hardhat-waffle": "^2.0.5",
     "@typechain/ethers-v5": "^10.2.0",
@@ -17,8 +22,12 @@
     "@types/chai": "^4.3.4",
     "@types/mocha": "^10.0.1",
     "@types/node": "^18.15.10",
+    "axios": "^1.4.0",
     "chai": "^4.3.7",
+    "dotenv": "^16.0.3",
     "ethereum-waffle": "^4.0.10",
+    "rome": "^12.0.0",
+    "solidity-coverage": "^0.8.2",
     "ts-node": "^10.9.1",
     "typechain": "^8.1.1",
     "typescript": "^5.0.2"

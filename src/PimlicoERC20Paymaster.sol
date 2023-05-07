@@ -77,7 +77,7 @@ contract PimlicoERC20Paymaster is BasePaymaster {
     /// @param to The address to transfer the tokens to.
     /// @param amount The amount of tokens to transfer.
     function withdrawToken(address to, uint256 amount) external onlyOwner {
-        SafeTransferLib.safeTransfer(address(token),to,amount);
+        SafeTransferLib.safeTransfer(address(token), to, amount);
     }
 
     /// @notice Updates the token price by fetching the latest price from the Oracle.
@@ -150,7 +150,11 @@ contract PimlicoERC20Paymaster is BasePaymaster {
                 / (1e18 * priceDenominator); // We use tx.gasprice here since we don't know the actual gas price used by the user
             if (uint256(bytes32(context[0:32])) > actualTokenNeeded) {
                 // If the initially provided token amount is greater than the actual amount needed, refund the difference
-                SafeTransferLib.safeTransfer(address(token), address(bytes20(context[32:52])), uint256(bytes32(context[0:32])) - actualTokenNeeded);
+                SafeTransferLib.safeTransfer(
+                    address(token),
+                    address(bytes20(context[32:52])),
+                    uint256(bytes32(context[0:32])) - actualTokenNeeded
+                );
             } // If the token amount is not greater than the actual amount needed, no refund occurs
 
             emit UserOperationSponsored(address(bytes20(context[32:52])), actualTokenNeeded, actualGasCost);

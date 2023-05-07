@@ -16,7 +16,7 @@ import {
 } from '@account-abstraction/contracts/dist/types'
 import {
   IERC20
-} from "../typechain-types";
+} from "../../typechain-types";
 import { BytesLike } from '@ethersproject/bytes'
 import { expect } from 'chai'
 import { Create2Factory } from './Create2Factory'
