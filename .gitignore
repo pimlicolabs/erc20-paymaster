@@ -14,3 +14,5 @@ artifacts
 # forge files
 cache_forge
 out
+
+dist

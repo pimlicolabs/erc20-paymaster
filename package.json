@@ -1,6 +1,7 @@
 {
   "name": "@pimlico/erc20-paymaster",
   "version": "0.0.1",
+  "license": "GPL-3.0-or-later",
   "description": "A permissionless ERC20 Paymaster implementation by Pimlico",
   "dependencies": {
     "@account-abstraction/contracts": "^0.6.0",
@@ -31,5 +32,8 @@
     "ts-node": "^10.9.1",
     "typechain": "^8.1.1",
     "typescript": "^5.0.2"
-  }
+  },
+  "files": [
+    "/dist"
+  ]
 }

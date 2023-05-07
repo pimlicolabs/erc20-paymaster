@@ -195,6 +195,10 @@ export class ERC20Paymaster {
         this.paymasterContract = new PimlicoERC20Paymaster__factory(voidSigner).attach(paymasterAddress)
     }
 
+    /**
+     * @dev Verifies that the user has approved enough tokens for the UserOperation
+     * @param userOp the user operation to use to verify the token approval
+     */
     async verifyTokenApproval(userOp: NotPromise<UserOperationStruct>): Promise<void> {
         const token = await this.paymasterContract.token()
         const tokenAmountRequired = await this.calculateTokenAmount(userOp)
