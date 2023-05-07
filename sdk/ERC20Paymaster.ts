@@ -151,8 +151,8 @@ export async function getERC20Paymaster(
         throw new Error("Deployer must be provided")
     }
     const address = await calculateERC20PaymasterAddress(parsedOptions)
-    if((await provider.getCode(address)).length <= 2){
-      throw new Error(`ERC20Paymaster not deployed at ${address}`)
+    if ((await provider.getCode(address)).length <= 2) {
+        throw new Error(`ERC20Paymaster not deployed at ${address}`)
     }
     return new ERC20Paymaster(provider, address)
 }
@@ -202,8 +202,8 @@ export class ERC20Paymaster {
     async calculateTokenAmount(userOp: NotPromise<UserOperationStruct>): Promise<BigNumber> {
         const priceMarkup = await this.paymasterContract.priceMarkup()
         const cachedPrice = await this.paymasterContract.previousPrice()
-        if(cachedPrice.eq(0)){
-          throw new Error("ERC20Paymaster: no previous price set")
+        if (cachedPrice.eq(0)) {
+            throw new Error("ERC20Paymaster: no previous price set")
         }
 
         const requiredPreFund = BigNumber.from(userOp.preVerificationGas)
