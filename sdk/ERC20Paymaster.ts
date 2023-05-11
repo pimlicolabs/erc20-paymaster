@@ -157,9 +157,9 @@ export async function getERC20Paymaster(
     return new ERC20Paymaster(provider, address)
 }
 
-export async function calculateERC20PaymasterAddress(
+export function calculateERC20PaymasterAddress(
     options: Required<Omit<Omit<ERC20PaymasterBuildOptions, "nativeAsset">, "deployer">>
-): Promise<string> {
+): string {
     const address = utils.getCreate2Address(
         "0x4e59b44847b379578588920cA78FbF26c0B4956C",
         "0x0000000000000000000000000000000000000000000000000000000000000000",
