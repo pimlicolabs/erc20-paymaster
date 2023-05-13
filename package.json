@@ -3,6 +3,7 @@
   "version": "0.0.2",
   "license": "GPL-3.0-or-later",
   "description": "A permissionless ERC20 Paymaster implementation by Pimlico",
+  "main": "./dist/sdk/index.js",
   "dependencies": {
     "@account-abstraction/contracts": "^0.6.0",
     "@account-abstraction/utils": "^0.5.0",
