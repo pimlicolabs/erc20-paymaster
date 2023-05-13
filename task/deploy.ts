@@ -35,6 +35,7 @@ task("deploy-paymaster", "deploy erc20 paymaster")
   .setAction(async (taskArgs, hre) => {
     const { ethers } = hre;
     const { token, entrypoint, tokenOracle, nativeOracle, owner } = taskArgs;
+    console.log("owner: " + await (await ethers.getSigners())[0].getAddress());
     const paymaster = await deployERC20Paymaster(
       ethers.provider,
       token,
@@ -48,6 +49,28 @@ task("deploy-paymaster", "deploy erc20 paymaster")
     );
     console.log("contract deployed at : " + paymaster.paymasterContract.address);
   });
+task("paymaster-address", "deploy erc20 paymaster")
+  .addParam("token", "token ticker")
+  .addOptionalParam("entrypoint", "entrypoint address")
+  .addOptionalParam("tokenOracle", "token oracle address")
+  .addOptionalParam("nativeOracle", "native asset oracle address")
+  .addOptionalParam("owner", "owner address")
+  .setAction(async (taskArgs, hre) => {
+    const { ethers } = hre;
+    const { token, entrypoint, tokenOracle, nativeOracle, owner } = taskArgs;
+    console.log("owner: " + await (await ethers.getSigners())[0].getAddress());
+    const paymaster = await calculateERC20PaymasterAddress(
+      {
+        entrypoint: entrypoint??ENTRYPOINT_0_6,
+        tokenAddress: TOKEN_ADDRESS[(await ethers.provider.getNetwork()).chainId][token],
+        tokenOracle: tokenOracle??ORACLE_ADDRESS[(await ethers.provider.getNetwork()).chainId][token],
+        nativeAssetOracle: nativeOracle??ORACLE_ADDRESS[(await ethers.provider.getNetwork()).chainId]["ETH"],
+        owner: owner??(await ethers.getSigners())[0].address,
+      }
+    );
+    console.log("contract deployed at : " + paymaster);
+  });
+
 
 task("fund-paymaster", "fund erc20 paymaster")
   .addParam("token", "token ticker")
@@ -65,8 +88,9 @@ task("fund-paymaster", "fund erc20 paymaster")
     console.log("paymaster address: ", paymasterAddress);
     console.log("paymaster deployed: ", (await ethers.provider.getCode(paymasterAddress)).length > 2);
     const erc20Paymaster = await ethers.getContractAt("PimlicoERC20Paymaster", paymasterAddress);
-    const tx = await erc20Paymaster.deposit({ value: ethers.utils.parseEther("0.1") });
+    const tx =     await erc20Paymaster.addStake(1, { value: ethers.utils.parseEther("0.1").toHexString() });
     await tx.wait();
+    await erc20Paymaster.deposit({ value: ethers.utils.parseEther("0.1").toHexString() });
     console.log("deposit of paymaster: ", await erc20Paymaster.getDeposit());
   });
 
@@ -87,7 +111,7 @@ task("userop-test", "test userOps")
 
     const tokenAddr = TOKEN_ADDRESS[(await ethers.provider.getNetwork()).chainId][token];
     const signer = (await ethers.getSigners())[0];
-    await erc20Paymaster.paymasterContract.connect(signer).updatePrice();
+    //await erc20Paymaster.paymasterContract.connect(signer).updatePrice();
     const accOwner = createAccountOwner(ethers.provider);
     const factory = SimpleAccountFactory__factory.connect("0x628D5eCD6913d1E0375b1F1411ee6E402F717991", signer);
     const account = SimpleAccount__factory.connect(await factory.getAddress(await accOwner.getAddress(), 0), signer);
@@ -101,16 +125,16 @@ task("userop-test", "test userOps")
     //   value: ethers.utils.parseEther("0.1")
     // })
 
-    // await account.connect(accOwner).execute(
-    //   tokenAddr,
-    //   0,
-    //   erc20.interface.encodeFunctionData("approve",
-    //     [
-    //       erc20Paymaster.paymasterContract.address,
-    //       ethers.constants.MaxUint256
-    //     ]
-    //   )
-    // );
+    await account.connect(accOwner).execute(
+      tokenAddr,
+      0,
+      erc20.interface.encodeFunctionData("approve",
+        [
+          erc20Paymaster.paymasterContract.address,
+          ethers.constants.MaxUint256
+        ]
+      )
+    );
 
     // console.log("approved");
     // await erc20.connect(signer).transfer(account.address, ethers.utils.parseEther("1000"));
@@ -134,7 +158,7 @@ task("userop-test", "test userOps")
     console.log("paymasterAndData: ", paymasterAndData);
     op.paymasterAndData = paymasterAndData;
     op = signUserOp(op, accOwner, entrypoint.address, (await ethers.provider.getNetwork()).chainId);
-    const bundlerRPC = new JsonRpcProvider("https://api.pimlico.io/v1/goerli/rpc?<API_KEY>");
+    const bundlerRPC = new JsonRpcProvider("http://localhost:3000/rpc");
 
     const structedOp = {
       sender: op.sender,

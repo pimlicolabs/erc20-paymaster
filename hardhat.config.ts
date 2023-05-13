@@ -57,9 +57,10 @@ const config: HardhatUserConfig = {
     sepolia: getNetwork('sepolia'),
     polygon: getNetwork('polygon-mainnet'),
     mumbai: getNetwork('polygon-mumbai'),
+    arbitrum: getNetwork('arbitrum-mainnet'),
   },
   etherscan: {
-    apiKey: "7G93WRBNWMMW5V4UD1CAGJ49WVAY5X6SAV"
+    apiKey: "4Q2IJ53AVX2G3QEZ9KXSQF1WZ6R24YENTZ"
   }
 };
 
