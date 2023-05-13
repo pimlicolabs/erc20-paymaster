@@ -69,7 +69,7 @@ task("userop-test", "test userOps")
 
         const tokenAddr = TOKEN_ADDRESS[(await ethers.provider.getNetwork()).chainId][token]
         const signer = (await ethers.getSigners())[0]
-        await erc20Paymaster.paymasterContract.connect(signer).updatePrice()
+        await erc20Paymaster.contract.connect(signer).updatePrice()
         const accOwner = createAccountOwner(ethers.provider)
         const factory = await new SimpleAccountFactory__factory(signer).deploy(ENTRYPOINT_0_6)
         await factory.createAccount(await accOwner.getAddress(), 0)
@@ -90,7 +90,7 @@ task("userop-test", "test userOps")
                 tokenAddr,
                 0,
                 erc20.interface.encodeFunctionData("approve", [
-                    erc20Paymaster.paymasterContract.address,
+                    erc20Paymaster.contract.address,
                     ethers.constants.MaxUint256
                 ])
             )

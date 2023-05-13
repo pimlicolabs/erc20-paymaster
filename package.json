@@ -8,8 +8,8 @@
   "types": "./dist/types/index.d.ts",
   "typings": "./dist/types/index.d.ts",
   "scripts": {
-    "clean": "rm -rf ./dist",
-    "build": "pnpm run clean && pnpm run build:cjs && pnpm run build:esm && pnpm run build:types",
+    "clean": "rm -rf ./dist && pnpm hardhat clean",
+    "build": "pnpm run clean && pnpm hardhat compile && pnpm run build:cjs && pnpm run build:esm && pnpm run build:types",
     "build:cjs": "tsc --project tsconfig.json --module commonjs --outDir ./dist/cjs --removeComments --verbatimModuleSyntax false && echo > ./dist/cjs/package.json '{\"type\":\"commonjs\"}'",
     "build:esm": "tsc --project tsconfig.json --module es2020 --outDir ./dist/esm --removeComments && echo > ./dist/esm/package.json '{\"type\":\"module\"}'",
     "build:types": "tsc --project tsconfig.json --module esnext --declarationDir ./dist/types --emitDeclarationOnly --declaration --declarationMap"
@@ -58,6 +58,13 @@
       "types": "./dist/types/typechain/index.d.ts",
       "import": "./dist/esm/typechain/index.js",
       "default": "./dist/cjs/typechain/index.js"
+    }
+  },
+  "typesVersions": {
+    "*": {
+      "contracts": [
+        "./dist/types/typechain/index.d.ts"
+      ]
     }
   }
 }

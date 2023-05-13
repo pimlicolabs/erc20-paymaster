@@ -5,7 +5,7 @@ import { NotPromise } from "@account-abstraction/utils"
 import { NATIVE_ASSET, ORACLE_ADDRESS, TOKEN_ADDRESS } from "./constants"
 import { TransactionRequest } from "@ethersproject/abstract-provider"
 
-export enum ERC20 {
+enum ERC20 {
     DAI = "DAI",
     USDC = "USDC",
     USDT = "USDT"
@@ -37,7 +37,7 @@ export class ERC20ApprovalError extends Error {
 
 async function validatePaymasterOptions(
     provider: providers.Provider,
-    erc20: ERC20 | string,
+    erc20: ERC20,
     options?: ERC20PaymasterBuildOptions
 ): Promise<Required<Omit<ERC20PaymasterBuildOptions, "deployer">>> {
     const parsedOptions = options ?? {}
@@ -149,7 +149,7 @@ export async function deployERC20Paymaster(
  */
 export async function getERC20Paymaster(
     provider: providers.Provider,
-    erc20: ERC20 | string,
+    erc20: ERC20,
     options?: Omit<Omit<ERC20PaymasterBuildOptions, "nativeAsset">, "deployer">
 ): Promise<ERC20Paymaster> {
     let parsedOptions: Required<Omit<Omit<ERC20PaymasterBuildOptions, "nativeAsset">, "deployer">>
@@ -188,11 +188,11 @@ export async function calculateERC20PaymasterAddress(
 }
 
 export class ERC20Paymaster {
-    public paymasterContract: PimlicoERC20Paymaster
+    public contract: PimlicoERC20Paymaster
 
     constructor(provider: providers.Provider, paymasterAddress: string) {
         const voidSigner = new VoidSigner(constants.AddressZero, provider)
-        this.paymasterContract = new PimlicoERC20Paymaster__factory(voidSigner).attach(paymasterAddress)
+        this.contract = new PimlicoERC20Paymaster__factory(voidSigner).attach(paymasterAddress)
     }
 
     /**
@@ -200,14 +200,14 @@ export class ERC20Paymaster {
      * @param userOp the user operation to use to verify the token approval
      */
     async verifyTokenApproval(userOp: NotPromise<UserOperationStruct>): Promise<void> {
-        const token = await this.paymasterContract.token()
+        const token = await this.contract.token()
         const tokenAmountRequired = await this.calculateTokenAmount(userOp)
         const tokenContract = new ethers.Contract(
             token,
             ["function allowance(address,address) view returns (uint256)"],
-            this.paymasterContract.signer
+            this.contract.signer
         )
-        const allowance = await tokenContract.allowance(userOp.sender, this.paymasterContract.address)
+        const allowance = await tokenContract.allowance(userOp.sender, this.contract.address)
         if (allowance.lt(tokenAmountRequired)) {
             throw new ERC20ApprovalError(
                 `ERC20Paymaster: token allowance not enough: ${allowance} < ${tokenAmountRequired}`
@@ -222,8 +222,8 @@ export class ERC20Paymaster {
      * @returns the recommend token price to set during paymaster execution
      */
     async calculateTokenAmount(userOp: NotPromise<UserOperationStruct>): Promise<BigNumber> {
-        const priceMarkup = await this.paymasterContract.priceMarkup()
-        const cachedPrice = await this.paymasterContract.previousPrice()
+        const priceMarkup = await this.contract.priceMarkup()
+        const cachedPrice = await this.contract.previousPrice()
         if (cachedPrice.eq(0)) {
             throw new Error("ERC20Paymaster: no previous price set")
         }
@@ -252,7 +252,7 @@ export class ERC20Paymaster {
     async generatePaymasterAndData(userOp: NotPromise<UserOperationStruct>): Promise<string> {
         const tokenAmount = await this.calculateTokenAmount(userOp)
         const paymasterAndData = utils.hexlify(
-            utils.concat([this.paymasterContract.address, utils.hexZeroPad(utils.hexlify(tokenAmount), 32)])
+            utils.concat([this.contract.address, utils.hexZeroPad(utils.hexlify(tokenAmount), 32)])
         )
         return paymasterAndData
     }
