@@ -53,6 +53,11 @@
       "types": "./dist/types/index.d.ts",
       "import": "./dist/esm/index.js",
       "default": "./dist/cjs/index.js"
+    },
+    "./contracts": {
+      "types": "./dist/types/typechain/index.d.ts",
+      "import": "./dist/esm/typechain/index.js",
+      "default": "./dist/cjs/typechain/index.js"
     }
   }
 }
