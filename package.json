@@ -1,6 +1,6 @@
 {
   "name": "@pimlico/erc20-paymaster",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "license": "GPL-3.0-or-later",
   "description": "A permissionless ERC20 Paymaster implementation by Pimlico",
   "main": "./dist/sdk/index.js",
