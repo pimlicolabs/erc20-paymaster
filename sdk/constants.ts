@@ -4,6 +4,10 @@ export const TOKEN_ADDRESS: Record<number, Record<string, string>> = {
         USDC: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
         USDT: "0xdac17f958d2ee523a2206206994597c13d831ec7"
     },
+    5: {
+        DAI: "0x591c9a8921FcAf2F2833FAF44FCE703E34b2093C",
+        USDC: "0xdaA3178a609509915Dea69C6639b68e2Bf0699aE",
+    },
     56: {
         USDC: "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d",
         USDT: "0x55d398326f99059ff775485246999027b3197955"
@@ -27,10 +31,11 @@ export const TOKEN_ADDRESS: Record<number, Record<string, string>> = {
 
 export const NATIVE_ASSET: Record<number, string> = {
     1: "ETH",
+    5: "ETH",
     56: "BNB",
     137: "MATIC",
-    42161: "AVAX",
-    43114: "ETH"
+    42161: "ETH",
+    43114: "AVAX"
 }
 
 export const ORACLE_ADDRESS: Record<number, Record<string, string>> = {
@@ -39,6 +44,11 @@ export const ORACLE_ADDRESS: Record<number, Record<string, string>> = {
         DAI: "0xaed0c38402a5d19df6e4c03f4e2dced6e29c1ee9",
         USDC: "0x8fffffd4afb6115b954bd326cbe7b4ba576818f6",
         USDT: "0x3e7d1eab13ad0104d2750b8863b489d65364e32d"
+    },
+    5: {
+        ETH : "0xD4a33860578De61DBAbDc8BFdb98FD742fA7028e",
+        DAI: "0x0d79df66BE487753B02D015Fb622DED7f0E9798d",
+        USDC: "0xAb5c49580294Aff77670F839ea425f5b78ab3Ae7"
     },
     56: {
         BNB: "0x0567f2323251f0aab15c8dfb1967e4e8a7d42aee",
@@ -52,15 +62,15 @@ export const ORACLE_ADDRESS: Record<number, Record<string, string>> = {
         USDT: "0x0a6513e40db6eb1b165753ad52e80663aea50545"
     },
     42161: {
-        AVAX: "0x0a77230d17318075983913bc2145db16c7366156",
-        DAI: "0x51d7180eda2260cc4f6e4eebb82fef5c3c2b8300",
-        USDC: "0xf096872672f44d6eba71458d74fe67f9a77a23b9",
-        USDT: "0xebe676ee90fe1112671f19b6b7459bc678b67e8a"
-    },
-    43114: {
         ETH: "0x639fe6ab55c921f74e7fac1ee960c0b6293ba612",
         DAI: "0xc5c8e77b397e531b8ec06bfb0048328b30e9ecfb",
         USDC: "0x50834f3163758fcc1df9973b6e91f0f0f0434ad3",
         USDT: "0x3f3f5df88dc9f13eac63df89ec16ef6e7e25dde7"
+    },
+    43114: {
+        AVAX: "0x0a77230d17318075983913bc2145db16c7366156",
+        DAI: "0x51d7180eda2260cc4f6e4eebb82fef5c3c2b8300",
+        USDC: "0xf096872672f44d6eba71458d74fe67f9a77a23b9",
+        USDT: "0xebe676ee90fe1112671f19b6b7459bc678b67e8a"
     }
 }
