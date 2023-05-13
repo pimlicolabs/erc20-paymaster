@@ -1,12 +1,23 @@
 {
   "name": "@pimlico/erc20-paymaster",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "license": "GPL-3.0-or-later",
   "description": "A permissionless ERC20 Paymaster implementation by Pimlico",
-  "main": "./dist/sdk/index.js",
+  "main": "./dist/cjs/index.js",
+  "module": "./dist/esm/index.js",
+  "types": "./dist/types/index.d.ts",
+  "typings": "./dist/types/index.d.ts",
+  "scripts": {
+    "clean": "rm -rf ./dist",
+    "build": "pnpm run clean && pnpm run build:cjs && pnpm run build:esm && pnpm run build:types",
+    "build:cjs": "tsc --project tsconfig.json --module commonjs --outDir ./dist/cjs --removeComments --verbatimModuleSyntax false && echo > ./dist/cjs/package.json '{\"type\":\"commonjs\"}'",
+    "build:esm": "tsc --project tsconfig.json --module es2020 --outDir ./dist/esm --removeComments && echo > ./dist/esm/package.json '{\"type\":\"module\"}'",
+    "build:types": "tsc --project tsconfig.json --module esnext --declarationDir ./dist/types --emitDeclarationOnly --declaration --declarationMap"
+  },
   "dependencies": {
     "@account-abstraction/contracts": "^0.6.0",
     "@account-abstraction/utils": "^0.5.0",
+    "@ethersproject/abi": "^5.7.0",
     "@ethersproject/abstract-provider": "^5.7.0",
     "@ethersproject/providers": "^5.7.2",
     "@openzeppelin/contracts": "^4.8.2",
@@ -39,9 +50,9 @@
   ],
   "exports": {
     ".": {
-      "types": "./dist/sdk/index.d.ts",
-      "require": "./dist/sdk/index.js",
-      "import": "./dist/sdk/index.js"
+      "types": "./dist/types/index.d.ts",
+      "import": "./dist/esm/index.js",
+      "default": "./dist/cjs/index.js"
     }
   }
 }

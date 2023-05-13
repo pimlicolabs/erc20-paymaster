@@ -1,6 +1,6 @@
 import { BigNumber, Signer, providers, utils, constants, VoidSigner, ethers } from "ethers"
 import { UserOperationStruct } from "@account-abstraction/contracts"
-import { PimlicoERC20Paymaster, PimlicoERC20Paymaster__factory } from "../typechain-types"
+import { PimlicoERC20Paymaster, PimlicoERC20Paymaster__factory } from "./typechain"
 import { NotPromise } from "@account-abstraction/utils"
 import { NATIVE_ASSET, ORACLE_ADDRESS, TOKEN_ADDRESS } from "./constants"
 import { TransactionRequest } from "@ethersproject/abstract-provider"

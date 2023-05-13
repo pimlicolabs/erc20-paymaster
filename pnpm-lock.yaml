@@ -7,6 +7,9 @@ dependencies:
   '@account-abstraction/utils':
     specifier: ^0.5.0
     version: 0.5.0
+  '@ethersproject/abi':
+    specifier: ^5.7.0
+    version: 5.7.0
   '@ethersproject/abstract-provider':
     specifier: ^5.7.0
     version: 5.7.0

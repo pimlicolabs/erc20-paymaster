@@ -1,16 +1,17 @@
-import { HardhatUserConfig } from "hardhat/config"
+import "hardhat/config"
 import "@nomiclabs/hardhat-ethers"
 import "@nomiclabs/hardhat-waffle"
-import "@typechain/hardhat"
 import "@nomicfoundation/hardhat-foundry"
 import "@nomicfoundation/hardhat-verify"
-import "./task/deploy"
+// import "./task/deploy"
+import "@typechain/hardhat"
+import "@typechain/ethers-v5"
 import * as fs from "fs"
 import * as dotenv from "dotenv"
 dotenv.config()
 
 const mnemonicFileName = process.env.MNEMONIC_FILE ?? `${process.env.HOME}/.secret/testnet-mnemonic.txt`
-let mnemonic = "test ".repeat(11) + "junk"
+let mnemonic = `${"test ".repeat(11)}junk`
 if (fs.existsSync(mnemonicFileName)) {
     mnemonic = fs.readFileSync(mnemonicFileName, "ascii")
 }
@@ -41,7 +42,7 @@ function getAccounts(): string[] | { mnemonic: string } {
     }
 }
 
-const config: HardhatUserConfig = {
+const config = {
     solidity: {
         version: "0.8.18",
         settings: {
@@ -59,6 +60,10 @@ const config: HardhatUserConfig = {
         sepolia: getNetwork("sepolia"),
         polygon: getNetwork("polygon-mainnet"),
         mumbai: getNetwork("polygon-mumbai")
+    },
+    typechain: {
+        outDir: "sdk/typechain",
+        target: "ethers-v5"
     }
 }
 
