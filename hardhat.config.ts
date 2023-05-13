@@ -3,7 +3,7 @@ import "@nomiclabs/hardhat-ethers"
 import "@nomiclabs/hardhat-waffle"
 import "@nomicfoundation/hardhat-foundry"
 import "@nomicfoundation/hardhat-verify"
-// import "./task/deploy"
+//import "./task/deploy"
 import "@typechain/hardhat"
 import "@typechain/ethers-v5"
 import * as fs from "fs"
@@ -51,6 +51,9 @@ const config = {
                 runs: 1000000
             },
             viaIR: true
+        },
+        metadata: {
+            bytecodeHash: 'none'
         }
     },
     networks: {
@@ -59,12 +62,13 @@ const config = {
         goerli: getNetwork("goerli"),
         sepolia: getNetwork("sepolia"),
         polygon: getNetwork("polygon-mainnet"),
-        mumbai: getNetwork("polygon-mumbai")
+        mumbai: getNetwork("polygon-mumbai"),
+        arbitrum: getNetwork("arbitrum-mainnet"),
     },
     typechain: {
         outDir: "sdk/typechain",
         target: "ethers-v5"
-    }
+    },
 }
 
 export default config

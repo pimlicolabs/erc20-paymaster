@@ -5,6 +5,7 @@ import {
     SimpleAccountFactory__factory
 } from "@account-abstraction/contracts/dist/types"
 import {
+  NATIVE_ASSET,
     ORACLE_ADDRESS,
     TOKEN_ADDRESS,
     calculateERC20PaymasterAddress,
@@ -34,6 +35,24 @@ task("deploy-paymaster", "deploy erc20 paymaster")
             deployer: (await ethers.getSigners())[0]
         })
     })
+
+task("paymaster-address", "calculate erc20 paymaster address")
+  .addParam("token", "token ticker")
+  .addOptionalParam("entrypoint", "entrypoint address")
+  .addOptionalParam("tokenOracle", "token oracle address")
+  .addOptionalParam("nativeOracle", "native asset oracle address")
+  .addOptionalParam("owner", "owner address")
+  .setAction(async (taskArgs, hre) => {
+      const { ethers } = hre
+      const { token, entrypoint, tokenOracle, nativeOracle, owner } = taskArgs
+      console.log("paymaster address: ", calculateERC20PaymasterAddress({
+        entrypoint: entrypoint ?? ENTRYPOINT_0_6,
+        tokenAddress: TOKEN_ADDRESS[(await ethers.provider.getNetwork()).chainId][token],
+        tokenOracle: tokenOracle ?? ORACLE_ADDRESS[(await ethers.provider.getNetwork()).chainId][token],
+        nativeAssetOracle: nativeOracle ?? ORACLE_ADDRESS[(await ethers.provider.getNetwork()).chainId][NATIVE_ASSET[(await ethers.provider.getNetwork()).chainId]],
+        owner: owner ?? (await ethers.getSigners())[0].address
+      }))
+  })
 
 task("fund-paymaster", "fund erc20 paymaster")
     .addParam("token", "token ticker")
