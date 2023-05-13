@@ -50,11 +50,11 @@ const config = {
                 enabled: true,
                 runs: 1000000
             },
+            metadata: {
+                bytecodeHash: "none"
+            },
             viaIR: true
         },
-        metadata: {
-            bytecodeHash: "none"
-        }
     },
     networks: {
         localhost: getNetwork1("http://127.0.0.1:8545"),
