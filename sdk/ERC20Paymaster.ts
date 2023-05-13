@@ -5,11 +5,7 @@ import { NotPromise } from "@account-abstraction/utils"
 import { NATIVE_ASSET, ORACLE_ADDRESS, TOKEN_ADDRESS } from "./constants"
 import { TransactionRequest } from "@ethersproject/abstract-provider"
 
-enum ERC20 {
-    DAI = "DAI",
-    USDC = "USDC",
-    USDT = "USDT"
-}
+export type SupportedERC20 = "USDC" | "USDT" | "DAI"
 
 export enum Blockchains {
     ETHEREUM = 1,
@@ -37,7 +33,7 @@ export class ERC20ApprovalError extends Error {
 
 async function validatePaymasterOptions(
     provider: providers.Provider,
-    erc20: ERC20,
+    erc20: SupportedERC20,
     options?: ERC20PaymasterBuildOptions
 ): Promise<Required<Omit<ERC20PaymasterBuildOptions, "deployer">>> {
     const parsedOptions = options ?? {}
@@ -113,7 +109,7 @@ export function getPaymasterConstructor(
 
 export async function deployERC20Paymaster(
     provider: providers.Provider,
-    erc20: ERC20,
+    erc20: SupportedERC20,
     options?: ERC20PaymasterBuildOptions
 ): Promise<ERC20Paymaster> {
     const parsedOptions = await validatePaymasterOptions(provider, erc20, options)
@@ -149,7 +145,7 @@ export async function deployERC20Paymaster(
  */
 export async function getERC20Paymaster(
     provider: providers.Provider,
-    erc20: ERC20,
+    erc20: SupportedERC20,
     options?: Omit<Omit<ERC20PaymasterBuildOptions, "nativeAsset">, "deployer">
 ): Promise<ERC20Paymaster> {
     let parsedOptions: Required<Omit<Omit<ERC20PaymasterBuildOptions, "nativeAsset">, "deployer">>
