@@ -1,6 +1,6 @@
 {
   "name": "@pimlico/erc20-paymaster",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "license": "GPL-3.0-or-later",
   "description": "A permissionless ERC20 Paymaster implementation by Pimlico",
   "dependencies": {
@@ -10,7 +10,6 @@
     "@ethersproject/providers": "^5.7.2",
     "@openzeppelin/contracts": "^4.8.2",
     "ethers": "^5.7.2",
-    "hardhat": "^2.13.0",
     "solady": "^0.0.90"
   },
   "devDependencies": {
@@ -27,6 +26,7 @@
     "chai": "^4.3.7",
     "dotenv": "^16.0.3",
     "ethereum-waffle": "^4.0.10",
+    "hardhat": "^2.13.0",
     "rome": "^12.0.0",
     "solidity-coverage": "^0.8.2",
     "ts-node": "^10.9.1",
