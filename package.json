@@ -35,5 +35,12 @@
   },
   "files": [
     "/dist"
-  ]
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/sdk/index.d.ts",
+      "require": "./dist/sdk/index.js",
+      "import": "./dist/sdk/index.js"
+    }
+  }
 }

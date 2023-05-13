@@ -6,7 +6,7 @@ export const TOKEN_ADDRESS: Record<number, Record<string, string>> = {
     },
     5: {
         DAI: "0x591c9a8921FcAf2F2833FAF44FCE703E34b2093C",
-        USDC: "0xdaA3178a609509915Dea69C6639b68e2Bf0699aE",
+        USDC: "0xdaA3178a609509915Dea69C6639b68e2Bf0699aE"
     },
     56: {
         USDC: "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d",
@@ -46,7 +46,7 @@ export const ORACLE_ADDRESS: Record<number, Record<string, string>> = {
         USDT: "0x3e7d1eab13ad0104d2750b8863b489d65364e32d"
     },
     5: {
-        ETH : "0xD4a33860578De61DBAbDc8BFdb98FD742fA7028e",
+        ETH: "0xD4a33860578De61DBAbDc8BFdb98FD742fA7028e",
         DAI: "0x0d79df66BE487753B02D015Fb622DED7f0E9798d",
         USDC: "0xAb5c49580294Aff77670F839ea425f5b78ab3Ae7"
     },
