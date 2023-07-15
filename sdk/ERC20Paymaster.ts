@@ -25,11 +25,7 @@ export interface ERC20PaymasterBuildOptions {
     deployer?: Signer
 }
 
-export class ERC20ApprovalError extends Error {
-    constructor(message: string) {
-        super(message)
-    }
-}
+export class ERC20ApprovalError extends Error {}
 
 async function validatePaymasterOptions(
     provider: providers.Provider,
