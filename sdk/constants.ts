@@ -30,6 +30,9 @@ export const TOKEN_ADDRESS: Record<number, Record<string, string>> = {
     80001: {
         USDC: "0x0FA8781a83E46826621b3BC094Ea2A0212e71B23",
         USDT: "0xA02f6adc7926efeBBd59Fd43A84f4E0c0c91e832"
+    },
+    84531: {
+        USDC: "0x1B85deDe8178E18CdE599B4C9d913534553C3dBf"
     }
 }
 
@@ -40,7 +43,8 @@ export const NATIVE_ASSET: Record<number, string> = {
     137: "MATIC",
     42161: "ETH",
     43114: "AVAX",
-    80001: "MATIC"
+    80001: "MATIC",
+    84531: "ETH"
 }
 
 export const ORACLE_ADDRESS: Record<number, Record<string, string>> = {
@@ -83,5 +87,9 @@ export const ORACLE_ADDRESS: Record<number, Record<string, string>> = {
         USDC: "0x572dDec9087154dC5dfBB1546Bb62713147e0Ab0",
         USDT: "0x92C09849638959196E976289418e5973CC96d645",
         MATIC: "0xd0D5e3DB44DE05E9F294BB0a3bEEaF030DE24Ada"
+    },
+    84531: {
+        ETH: "0xcD2A119bD1F7DF95d706DE6F2057fDD45A0503E2",
+        USDC: "0xb85765935B4d9Ab6f841c9a00690Da5F34368bc0"
     }
 }
