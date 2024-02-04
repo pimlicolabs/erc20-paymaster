@@ -33,7 +33,7 @@ For more information, please refer to the comments within the contract source co
 ## SDK
 You can use permissionless.js to interact with an ERC20 Paymaster. Follow [this link](https://docs.pimlico.io/permissionless/tutorial/tutorial-3) to check out tutorial on how to submit user operation using with an ERC-20 Paymaster.
 
-Check out [these docs](https://docs.pimlico.io/permissionless/how-to/paymasters/use-custom-paymaster) if you're going to use custom paymaster implementation.
+Check out [these docs](https://docs.pimlico.io/permissionless/how-to/paymasters/use-custom-paymaster) if you're going to use a custom paymaster implementation.
 
 ## Development setup
 
