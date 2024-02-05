@@ -19,6 +19,7 @@ The PimlicoERC20Paymaster contract inherits from BasePaymaster.
 - updatePrice: Updates the token price by fetching the latest price from the Oracle.
 - _validatePaymasterUserOp: Validates a paymaster user operation and calculates the required token amount for the transaction.
 - _postOp: Performs post-operation tasks, such as updating the token price and refunding excess tokens.
+
 ### Events
 - ConfigUpdated: Emitted when the price markup and price update threshold configurations are updated.
 
@@ -28,6 +29,11 @@ Update the price markup and price update threshold configurations if needed, usi
 If necessary, the contract owner can withdraw tokens using the withdrawToken function.
 To update the token price, call the updatePrice function.
 For more information, please refer to the comments within the contract source code.
+
+## SDK
+You can use permissionless.js to interact with an ERC20 Paymaster. Follow [this link](https://docs.pimlico.io/permissionless/tutorial/tutorial-3) to check out tutorial on how to submit user operation using with an ERC-20 Paymaster.
+
+Check out [these docs](https://docs.pimlico.io/permissionless/how-to/paymasters/use-custom-paymaster) if you're going to use a custom paymaster implementation.
 
 ## Development setup
 
