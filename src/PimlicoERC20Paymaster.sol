@@ -98,28 +98,39 @@ contract PimlicoERC20Paymaster is BasePaymaster {
         override
         returns (bytes memory context, uint256 validationResult)
     {
+        uint192 tokenPrice = getPrice();
+
+        uint256 tokenAmount = (requiredPreFund + (REFUND_POSTOP_COST) * userOp.maxFeePerGas) * priceMarkup
+            * tokenPrice / (1e18 * priceDenominator);
+
+        SafeTransferLib.safeTransferFrom(address(token), userOp.sender, address(this), tokenAmount);
+
+
         unchecked {
-            uint256 cachedPrice = previousPrice;
-            require(cachedPrice != 0, "PP-ERC20 : price not set");
             uint256 length = userOp.paymasterAndData.length - 20;
             // 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffdf is the mask for the last 6 bits 011111 which mean length should be 100000(32) || 000000(0)
             require(
                 length & 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffdf == 0,
                 "PP-ERC20 : invalid data length"
             );
-            // NOTE: we assumed that nativeAsset's decimals is 18, if there is any nativeAsset with different decimals, need to change the 1e18 to the correct decimals
-            uint256 tokenAmount = (requiredPreFund + (REFUND_POSTOP_COST) * userOp.maxFeePerGas) * priceMarkup
-                * cachedPrice / (1e18 * priceDenominator);
             if (length == 32) {
                 require(
                     tokenAmount <= uint256(bytes32(userOp.paymasterAndData[20:52])), "PP-ERC20 : token amount too high"
                 );
             }
             SafeTransferLib.safeTransferFrom(address(token), userOp.sender, address(this), tokenAmount);
-            context = abi.encodePacked(tokenAmount, userOp.sender);
+            context = abi.encodePacked(tokenAmount, tokenPrice, userOp.sender);
             // No return here since validationData == 0 and we have context saved in memory
             validationResult = 0;
         }
+    }
+
+    function getPrice() public view returns (uint192) {
+        uint192 tokenPrice = fetchPrice(tokenOracle);
+        uint192 nativeAsset = fetchPrice(nativeAssetOracle);
+        uint192 price = nativeAsset * uint192(tokenDecimals) / tokenPrice;
+
+        return price;
     }
 
     /// @notice Performs post-operation tasks, such as updating the token price and refunding excess tokens.
@@ -128,37 +139,24 @@ contract PimlicoERC20Paymaster is BasePaymaster {
     /// @param context The context containing the token amount and user sender address.
     /// @param actualGasCost The actual gas cost of the transaction.
     function _postOp(PostOpMode mode, bytes calldata context, uint256 actualGasCost) internal override {
-        if (mode == PostOpMode.postOpReverted) {
-            return; // Do nothing here to not revert the whole bundle and harm reputation
-        }
-        unchecked {
-            uint192 tokenPrice = fetchPrice(tokenOracle);
-            uint192 nativeAsset = fetchPrice(nativeAssetOracle);
-            uint256 cachedPrice = previousPrice;
-            uint192 price = nativeAsset * uint192(tokenDecimals) / tokenPrice;
-            uint256 cachedUpdateThreshold = priceUpdateThreshold;
-            if (
-                uint256(price) * priceDenominator / cachedPrice > priceDenominator + cachedUpdateThreshold
-                    || uint256(price) * priceDenominator / cachedPrice < priceDenominator - cachedUpdateThreshold
-            ) {
-                previousPrice = uint192(int192(price));
-                cachedPrice = uint192(int192(price));
-            }
-            // Refund tokens based on actual gas cost
-            // NOTE: we assumed that nativeAsset's decimals is 18, if there is any nativeAsset with different decimals, need to change the 1e18 to the correct decimals
-            uint256 actualTokenNeeded = (actualGasCost + REFUND_POSTOP_COST * tx.gasprice) * priceMarkup * cachedPrice
-                / (1e18 * priceDenominator); // We use tx.gasprice here since we don't know the actual gas price used by the user
-            if (uint256(bytes32(context[0:32])) > actualTokenNeeded) {
-                // If the initially provided token amount is greater than the actual amount needed, refund the difference
-                SafeTransferLib.safeTransfer(
-                    address(token),
-                    address(bytes20(context[32:52])),
-                    uint256(bytes32(context[0:32])) - actualTokenNeeded
-                );
-            } // If the token amount is not greater than the actual amount needed, no refund occurs
+        uint256 prefundTokenAmount = uint256(bytes32(context[0:32]));
+        uint192 tokenPrice = uint192(bytes24(context[32:56]));
+        address sender = address(bytes20(context[56:76]));
 
-            emit UserOperationSponsored(address(bytes20(context[32:52])), actualTokenNeeded, actualGasCost);
-        }
+        uint256 actualTokenNeeded = (actualGasCost + REFUND_POSTOP_COST * tx.gasprice) * priceMarkup * tokenPrice
+            / (1e18 * priceDenominator); // We use tx.gasprice here since we don't know the actual gas price used by the user
+
+        if (prefundTokenAmount > actualTokenNeeded) {
+            // If the initially provided token amount is greater than the actual amount needed, refund the difference
+            SafeTransferLib.safeTransfer(
+                address(token),
+                sender,
+                prefundTokenAmount - actualTokenNeeded
+            );
+        } // If the token amount is not greater than the actual amount needed, no refund occurs
+
+        emit UserOperationSponsored(sender, actualTokenNeeded, actualGasCost);
+        
     }
 
     /// @notice Fetches the latest price from the given Oracle.
