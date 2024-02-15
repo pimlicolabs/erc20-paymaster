@@ -6,7 +6,7 @@ import "src/test/TestERC20.sol";
 import "src/test/TestOracle.sol";
 import "src/test/TestCounter.sol";
 import "@account-abstraction/contracts/core/EntryPoint.sol";
-import "@account-abstraction/contracts/interfaces/UserOperation.sol";
+import "@account-abstraction/contracts/interfaces/PackedUserOperation.sol";
 import "@account-abstraction/contracts/samples/SimpleAccountFactory.sol";
 import "forge-std/Test.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
@@ -138,10 +138,10 @@ contract PimlicoERC20Paymaster18Test is Test {
     // sanity check for everything works without paymaster
     function testCall() external {
         vm.deal(address(account), 1e18);
-        (UserOperation memory op, uint256 prefund) =
+        (PackedUserOperation memory op, uint256 prefund) =
             fillUserOp(account, userKey, address(counter), 0, abi.encodeWithSelector(TestCounter.count.selector));
         op.signature = signUserOp(op, userKey);
-        UserOperation[] memory ops = new UserOperation[](1);
+        PackedUserOperation[] memory ops = new PackedUserOperation[](1);
         ops[0] = op;
         entryPoint.handleOps(ops, beneficiary);
     }
@@ -152,11 +152,11 @@ contract PimlicoERC20Paymaster18Test is Test {
         token.sudoMint(address(account), 1000e18); // 1000 usdc;
         token.sudoMint(address(paymaster), 1); // 1000 usdc;
         token.sudoApprove(address(account), address(paymaster), 1000e18);
-        (UserOperation memory op, uint256 prefund) =
+        (PackedUserOperation memory op, uint256 prefund) =
             fillUserOp(account, userKey, address(counter), 0, abi.encodeWithSelector(TestCounter.count.selector));
         op.paymasterAndData = abi.encodePacked(address(paymaster));
         op.signature = signUserOp(op, userKey);
-        UserOperation[] memory ops = new UserOperation[](1);
+        PackedUserOperation[] memory ops = new PackedUserOperation[](1);
         ops[0] = op;
         entryPoint.handleOps(ops, beneficiary);
     }
@@ -168,11 +168,11 @@ contract PimlicoERC20Paymaster18Test is Test {
         token.sudoMint(address(account), 1000e18); // 1000 usdc;
         token.sudoMint(address(paymaster), 1); // 1000 usdc;
         token.sudoApprove(address(account), address(paymaster), 1000e18);
-        (UserOperation memory op, uint256 prefund) =
+        (PackedUserOperation memory op, uint256 prefund) =
             fillUserOp(account, userKey, address(counter), 0, abi.encodeWithSelector(TestCounter.count.selector));
         op.paymasterAndData = abi.encodePacked(address(paymaster), limit);
         op.signature = signUserOp(op, userKey);
-        UserOperation[] memory ops = new UserOperation[](1);
+        PackedUserOperation[] memory ops = new PackedUserOperation[](1);
         ops[0] = op;
         entryPoint.handleOps(ops, beneficiary);
     }
@@ -184,11 +184,11 @@ contract PimlicoERC20Paymaster18Test is Test {
         token.sudoMint(address(account), 1000e18); // 1000 usdc;
         token.sudoMint(address(paymaster), 1); // 1000 usdc;
         token.sudoApprove(address(account), address(paymaster), 1000e18);
-        (UserOperation memory op, uint256 prefund) =
+        (PackedUserOperation memory op, uint256 prefund) =
             fillUserOp(account, userKey, address(counter), 0, abi.encodeWithSelector(TestCounter.count.selector));
         op.paymasterAndData = abi.encodePacked(address(paymaster), limit);
         op.signature = signUserOp(op, userKey);
-        UserOperation[] memory ops = new UserOperation[](1);
+        PackedUserOperation[] memory ops = new PackedUserOperation[](1);
         ops[0] = op;
         vm.expectRevert(
             abi.encodeWithSelector(
@@ -204,11 +204,11 @@ contract PimlicoERC20Paymaster18Test is Test {
         token.sudoMint(address(account), 1000e18); // 1000 usdc;
         token.sudoMint(address(paymaster), 1); // 1000 usdc;
         token.sudoApprove(address(account), address(paymaster), 1000e18);
-        (UserOperation memory op, uint256 prefund) =
+        (PackedUserOperation memory op, uint256 prefund) =
             fillUserOp(account, userKey, address(counter), 0, abi.encodeWithSelector(TestCounter.count.selector));
         op.paymasterAndData = abi.encodePacked(address(paymaster), hex"0000");
         op.signature = signUserOp(op, userKey);
-        UserOperation[] memory ops = new UserOperation[](1);
+        PackedUserOperation[] memory ops = new PackedUserOperation[](1);
         ops[0] = op;
         vm.expectRevert(
             abi.encodeWithSelector(
@@ -226,11 +226,11 @@ contract PimlicoERC20Paymaster18Test is Test {
         token.sudoMint(address(account), 1000e18); // 1000 usdc;
         token.sudoMint(address(paymaster), 1); // 1000 usdc;
         token.sudoApprove(address(account), address(paymaster), 1000e18);
-        (UserOperation memory op, uint256 prefund) =
+        (PackedUserOperation memory op, uint256 prefund) =
             fillUserOp(account, userKey, address(counter), 0, abi.encodeWithSelector(TestCounter.count.selector));
         op.paymasterAndData = abi.encodePacked(address(paymaster));
         op.signature = signUserOp(op, userKey);
-        UserOperation[] memory ops = new UserOperation[](1);
+        PackedUserOperation[] memory ops = new PackedUserOperation[](1);
         ops[0] = op;
         entryPoint.handleOps(ops, beneficiary);
         assertEq(paymaster.previousPrice(), prevPrice * 111 / 100);
@@ -244,11 +244,11 @@ contract PimlicoERC20Paymaster18Test is Test {
         token.sudoMint(address(account), 1000e18); // 1000 usdc;
         token.sudoMint(address(paymaster), 1); // 1000 usdc;
         token.sudoApprove(address(account), address(paymaster), 1000e18);
-        (UserOperation memory op, uint256 prefund) =
+        (PackedUserOperation memory op, uint256 prefund) =
             fillUserOp(account, userKey, address(counter), 0, abi.encodeWithSelector(TestCounter.count.selector));
         op.paymasterAndData = abi.encodePacked(address(paymaster));
         op.signature = signUserOp(op, userKey);
-        UserOperation[] memory ops = new UserOperation[](1);
+        PackedUserOperation[] memory ops = new PackedUserOperation[](1);
         ops[0] = op;
         entryPoint.handleOps(ops, beneficiary);
         assertEq(paymaster.previousPrice(), prevPrice * 89 / 100);
@@ -259,11 +259,11 @@ contract PimlicoERC20Paymaster18Test is Test {
         token.sudoMint(address(account), 1000e18); // 1000 usdc;
         token.sudoMint(address(paymaster), 1); // 1000 usdc;
         token.sudoApprove(address(account), address(paymaster), 1000e18);
-        (UserOperation memory op, uint256 prefund) =
+        (PackedUserOperation memory op, uint256 prefund) =
             fillUserOp(account, userKey, address(counter), 0, abi.encodeWithSelector(TestCounter.count.selector));
         op.paymasterAndData = abi.encodePacked(address(paymaster));
         op.signature = signUserOp(op, userKey);
-        UserOperation[] memory ops = new UserOperation[](1);
+        PackedUserOperation[] memory ops = new PackedUserOperation[](1);
         ops[0] = op;
         vm.expectRevert(
             abi.encodeWithSelector(IEntryPoint.FailedOp.selector, uint256(0), "AA33 reverted: PP-ERC20 : price not set")
@@ -278,7 +278,7 @@ contract PimlicoERC20Paymaster18Test is Test {
         token.sudoMint(address(account), 1000e18); // 1000 usdc;
         token.sudoMint(address(paymaster), 1); // 1000 usdc;
         token.sudoApprove(address(account), address(paymaster), 1000e18);
-        (UserOperation memory op, uint256 prefund) = fillUserOp(
+        (PackedUserOperation memory op, uint256 prefund) = fillUserOp(
             account,
             userKey,
             address(token),
@@ -289,14 +289,14 @@ contract PimlicoERC20Paymaster18Test is Test {
         );
         op.paymasterAndData = abi.encodePacked(address(paymaster), limit);
         op.signature = signUserOp(op, userKey);
-        UserOperation[] memory ops = new UserOperation[](1);
+        PackedUserOperation[] memory ops = new PackedUserOperation[](1);
         ops[0] = op;
         entryPoint.handleOps(ops, beneficiary);
     }
 
     function fillUserOp(SimpleAccount _sender, uint256 _key, address _to, uint256 _value, bytes memory _data)
         public
-        returns (UserOperation memory op, uint256 prefund)
+        returns (PackedUserOperation memory op, uint256 prefund)
     {
         op.sender = address(_sender);
         op.nonce = entryPoint.getNonce(address(_sender), 0);
@@ -312,15 +312,15 @@ contract PimlicoERC20Paymaster18Test is Test {
         //op.signature = signUserOp(op, _name);
     }
 
-    function signUserOp(UserOperation memory op, uint256 _key) public returns (bytes memory signature) {
+    function signUserOp(PackedUserOperation memory op, uint256 _key) public returns (bytes memory signature) {
         bytes32 hash = entryPoint.getUserOpHash(op);
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(_key, hash.toEthSignedMessageHash());
         signature = abi.encodePacked(r, s, v);
     }
 
-    function simulateVerificationGas(EntryPoint _entrypoint, UserOperation memory op)
+    function simulateVerificationGas(EntryPoint _entrypoint, PackedUserOperation memory op)
         public
-        returns (UserOperation memory, uint256 preFund)
+        returns (PackedUserOperation memory, uint256 preFund)
     {
         (bool success, bytes memory ret) =
             address(_entrypoint).call(abi.encodeWithSelector(EntryPoint.simulateValidation.selector, op));
@@ -336,7 +336,7 @@ contract PimlicoERC20Paymaster18Test is Test {
         return (op, retInfo.prefund);
     }
 
-    function simulateCallGas(EntryPoint _entrypoint, UserOperation memory op) internal returns (uint256) {
+    function simulateCallGas(EntryPoint _entrypoint, PackedUserOperation memory op) internal returns (uint256) {
         try this.calcGas(_entrypoint, op.sender, op.callData) {
             revert("Should have failed");
         } catch Error(string memory reason) {
