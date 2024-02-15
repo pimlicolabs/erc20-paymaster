@@ -205,6 +205,6 @@ contract PimlicoERC20Paymaster is BasePaymaster {
      * @param userOp - The user operation data.
      */
     function hashForPaymaster(PackedUserOperation calldata userOp) public pure returns (bytes32) {
-        return keccak256(encodeForPaymaster(userOp));
+        return keccak256(abi.encode(keccak256(encodeForPaymaster(userOp)), address(this), block.chainid));
     }
 }
