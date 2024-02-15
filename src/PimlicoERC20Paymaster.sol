@@ -100,7 +100,7 @@ contract PimlicoERC20Paymaster is BasePaymaster {
             address payer = address(bytes20(userOp.paymasterAndData[52:72]));
             bytes memory signature = userOp.paymasterAndData[72:104];
 
-            bytes32 paymasterHash = hashForPaymaster(userOp);
+            bytes32 paymasterHash = getHash(userOp);
 
             bool valid = SignatureChecker.isValidSignatureNow(payer, paymasterHash, signature);
 
@@ -134,11 +134,20 @@ contract PimlicoERC20Paymaster is BasePaymaster {
         if (prefundTokenAmount > actualTokenNeeded) {
             if (context.length == 96) {
                 address payer = address(bytes20(context[76:96]));
-                // solhint-disable-next-line no-empty-blocks
-                try SafeTransferLib.safeTransferFrom(address(token), sender, address(this), actualTokenNeeded) {
+
+                bytes memory innerCall =
+                    abi.encodeCall(this.safeTransferFrom, (token, sender, address(this), actualTokenNeeded));
+
+                bool success;
+                // solhint-disable-next-line no-inline-assembly
+                assembly ("memory-safe") {
+                    success := call(gas(), address(), 0, add(innerCall, 0x20), mload(innerCall), 0, 32)
+                }
+
+                if (success) {
                     // If the token transfer is successful, transfer the held tokens back to the payer
                     SafeTransferLib.safeTransfer(address(token), payer, prefundTokenAmount);
-                } catch {
+                } else {
                     // If the token transfer fails, the payer is deemed responsible for the token payment
                     SafeTransferLib.safeTransfer(address(token), payer, prefundTokenAmount - actualTokenNeeded);
                 }
@@ -148,6 +157,11 @@ contract PimlicoERC20Paymaster is BasePaymaster {
         } // If the token amount is not greater than the actual amount needed, no refund occurs
 
         emit UserOperationSponsored(sender, actualTokenNeeded, actualGasCost);
+    }
+
+    function safeTransferFrom(IERC20 _token, address _from, address _to, uint256 _amount) external {
+        require(msg.sender == address(this), "PP-ERC20 : only self-call");
+        SafeTransferLib.safeTransferFrom(address(_token), _from, _to, _amount);
     }
 
     function getPrice() public view returns (uint192) {
@@ -172,39 +186,24 @@ contract PimlicoERC20Paymaster is BasePaymaster {
     }
 
     /**
-     * Get sender from user operation data.
-     * @param userOp - The user operation data.
-     */
-    function getSender(PackedUserOperation calldata userOp) internal pure returns (address) {
-        address data;
-        //read sender from userOp, which is first userOp member (saves 800 gas...)
-        assembly {
-            data := calldataload(userOp)
-        }
-        return address(uint160(data));
-    }
-
-    /**
-     * Pack the user operation data into bytes for hashing.
-     * @param userOp - The user operation data.
-     */
-    function encodeForPaymaster(PackedUserOperation calldata userOp) internal pure returns (bytes memory ret) {
-        address sender = getSender(userOp);
-        uint256 nonce = userOp.nonce;
-        bytes32 hashInitCode = calldataKeccak(userOp.initCode);
-        bytes32 hashCallData = calldataKeccak(userOp.callData);
-        bytes32 accountGasLimits = userOp.accountGasLimits;
-        uint256 preVerificationGas = userOp.preVerificationGas;
-        bytes32 gasFees = userOp.gasFees;
-
-        return abi.encode(sender, nonce, hashInitCode, hashCallData, accountGasLimits, preVerificationGas, gasFees);
-    }
-
-    /**
      * Hash the user operation data.
      * @param userOp - The user operation data.
      */
-    function hashForPaymaster(PackedUserOperation calldata userOp) public pure returns (bytes32) {
-        return keccak256(abi.encode(keccak256(encodeForPaymaster(userOp)), address(this), block.chainid));
+    function getHash(PackedUserOperation calldata userOp) public pure returns (bytes32) {
+        address sender = userOp.getSender();
+        return keccak256(
+            abi.encode(
+                sender,
+                userOp.nonce,
+                keccak256(userOp.initCode),
+                keccak256(userOp.callData),
+                userOp.accountGasLimits,
+                uint256(bytes32(userOp.paymasterAndData[PAYMASTER_VALIDATION_GAS_OFFSET:PAYMASTER_DATA_OFFSET])),
+                userOp.preVerificationGas,
+                userOp.gasFees,
+                block.chainid,
+                address(this)
+            )
+        );
     }
 }
