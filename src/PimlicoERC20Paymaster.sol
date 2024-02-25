@@ -97,16 +97,16 @@ contract PimlicoERC20Paymaster is BasePaymaster {
             (maxCost + (REFUND_POSTOP_COST) * maxFeePerGas) * priceMarkup * tokenPrice / (1e18 * priceDenominator);
 
         if (length == 52) {
-            address payer = address(bytes20(userOp.paymasterAndData[52:72]));
+            address guarantor = address(bytes20(userOp.paymasterAndData[52:72]));
             bytes memory signature = userOp.paymasterAndData[72:104];
 
             bytes32 paymasterHash = getHash(userOp);
 
-            bool valid = SignatureChecker.isValidSignatureNow(payer, paymasterHash, signature);
+            bool valid = SignatureChecker.isValidSignatureNow(guarantor, paymasterHash, signature);
 
             require(valid, "PP-ERC20 : invalid signature");
-            SafeTransferLib.safeTransferFrom(address(token), payer, address(this), tokenAmount);
-            context = abi.encodePacked(tokenAmount, tokenPrice, userOp.sender, payer);
+            SafeTransferLib.safeTransferFrom(address(token), guarantor, address(this), tokenAmount);
+            context = abi.encodePacked(tokenAmount, tokenPrice, userOp.sender, guarantor);
             validationResult = 0;
         } else {
             SafeTransferLib.safeTransferFrom(address(token), userOp.sender, address(this), tokenAmount);
@@ -133,23 +133,17 @@ contract PimlicoERC20Paymaster is BasePaymaster {
         // If the initially provided token amount is greater than the actual amount needed, refund the difference
         if (prefundTokenAmount > actualTokenNeeded) {
             if (context.length == 96) {
-                address payer = address(bytes20(context[76:96]));
+                address guarantor = address(bytes20(context[76:96]));
 
-                bytes memory innerCall =
-                    abi.encodeCall(this.safeTransferFrom, (token, sender, address(this), actualTokenNeeded));
-
-                bool success;
                 // solhint-disable-next-line no-inline-assembly
-                assembly ("memory-safe") {
-                    success := call(gas(), address(), 0, add(innerCall, 0x20), mload(innerCall), 0, 32)
-                }
+                bool success = safeTransferFrom(address(token), sender, address(this), actualTokenNeeded);
 
                 if (success) {
-                    // If the token transfer is successful, transfer the held tokens back to the payer
-                    SafeTransferLib.safeTransfer(address(token), payer, prefundTokenAmount);
+                    // If the token transfer is successful, transfer the held tokens back to the guarantor
+                    SafeTransferLib.safeTransfer(address(token), guarantor, prefundTokenAmount);
                 } else {
-                    // If the token transfer fails, the payer is deemed responsible for the token payment
-                    SafeTransferLib.safeTransfer(address(token), payer, prefundTokenAmount - actualTokenNeeded);
+                    // If the token transfer fails, the guarantor is deemed responsible for the token payment
+                    SafeTransferLib.safeTransfer(address(token), guarantor, prefundTokenAmount - actualTokenNeeded);
                 }
             } else {
                 SafeTransferLib.safeTransfer(address(token), sender, prefundTokenAmount - actualTokenNeeded);
@@ -159,9 +153,43 @@ contract PimlicoERC20Paymaster is BasePaymaster {
         emit UserOperationSponsored(sender, actualTokenNeeded, actualGasCost);
     }
 
-    function safeTransferFrom(IERC20 _token, address _from, address _to, uint256 _amount) external {
-        require(msg.sender == address(this), "PP-ERC20 : only self-call");
-        SafeTransferLib.safeTransferFrom(address(_token), _from, _to, _amount);
+    /// @dev Sends `amount` of ERC20 `token` from `from` to `to`.
+    /// Reverts upon failure.
+    ///
+    /// The `from` account must have at least `amount` approved for
+    /// the current contract to manage.
+    function safeTransferFrom(address _token, address _from, address _to, uint256 _amount)
+        internal
+        returns (bool success)
+    {
+        /// @solidity memory-safe-assembly
+        assembly {
+            let m := mload(0x40) // Cache the free memory pointer.
+
+            mstore(0x60, _amount) // Store the `amount` argument.
+            mstore(0x40, _to) // Store the `to` argument.
+            mstore(0x2c, shl(96, _from)) // Store the `from` argument.
+            // Store the function selector of `transferFrom(address,address,uint256)`.
+            mstore(0x0c, 0x23b872dd000000000000000000000000)
+
+            if iszero(
+                and( // The arguments of `and` are evaluated from right to left.
+                    // Set success to whether the call reverted, if not we check it either
+                    // returned exactly 1 (can't just be non-zero data), or had no return data.
+                    or(eq(mload(0x00), 1), iszero(returndatasize())),
+                    call(gas(), _token, 0, 0x1c, 0x64, 0x00, 0x20)
+                )
+            ) {
+                success := 0
+                mstore(0x60, 0) // Restore the zero slot to zero.
+                mstore(0x40, m) // Restore the free memory pointer.
+                return(0, 0)
+            }
+
+            success := 1
+            mstore(0x60, 0) // Restore the zero slot to zero.
+            mstore(0x40, m) // Restore the free memory pointer.
+        }
     }
 
     function getPrice() public view returns (uint192) {
