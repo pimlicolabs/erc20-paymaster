@@ -84,7 +84,7 @@ contract PimlicoERC20Paymaster18Test is Test {
     function testUpdateConfigFailMarkupTooLow(uint32 _priceMarkup) external {
         _priceMarkup = uint32(bound(_priceMarkup, 0, 1e6 - 1)); // 100% - 120%
         vm.startPrank(paymasterOperator);
-        vm.expectRevert("PP-ERC20 : price markeup too low");
+        vm.expectRevert("PP-ERC20: price markeup too low");
         paymaster.updateConfig(_priceMarkup);
         vm.stopPrank();
     }
@@ -92,7 +92,7 @@ contract PimlicoERC20Paymaster18Test is Test {
     function testUpdateConfigFailMarkupTooHigh(uint32 _priceMarkup) external {
         _priceMarkup = uint32(bound(_priceMarkup, 12e5 + 1, type(uint32).max)); // 100% - 120%
         vm.startPrank(paymasterOperator);
-        vm.expectRevert("PP-ERC20 : price markup too high");
+        vm.expectRevert("PP-ERC20: price markup too high");
         paymaster.updateConfig(_priceMarkup);
         vm.stopPrank();
     }
@@ -162,7 +162,7 @@ contract PimlicoERC20Paymaster18Test is Test {
         ops[0] = op;
         vm.expectRevert(
             abi.encodeWithSelector(
-                IEntryPoint.FailedOp.selector, uint256(0), "AA33 reverted: PP-ERC20 : token amount too high"
+                IEntryPoint.FailedOp.selector, uint256(0), "AA33 reverted: PP-ERC20: token amount too high"
             )
         );
         entryPoint.handleOps(ops, beneficiary);
@@ -180,9 +180,13 @@ contract PimlicoERC20Paymaster18Test is Test {
         op.signature = signUserOp(op, userKey);
         PackedUserOperation[] memory ops = new PackedUserOperation[](1);
         ops[0] = op;
+
         vm.expectRevert(
             abi.encodeWithSelector(
-                IEntryPoint.FailedOpWithRevert.selector, uint256(0), "AA33 reverted", "PP-ERC20 : invalid data length"
+                IEntryPoint.FailedOpWithRevert.selector,
+                uint256(0),
+                "AA33 reverted",
+                abi.encodeWithSignature("Error(string)", "PP-ERC20: invalid data length")
             )
         );
         entryPoint.handleOps(ops, beneficiary);

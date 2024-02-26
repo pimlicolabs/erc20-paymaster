@@ -58,15 +58,15 @@ contract PimlicoERC20Paymaster is BasePaymaster {
         priceMarkup = 110e4; // 110%  1e6 = 100%
         transferOwnership(_owner);
         tokenDecimals = 10 ** _token.decimals();
-        require(_tokenOracle.decimals() == 8, "PP-ERC20 : token oracle decimals must be 8");
-        require(_nativeAssetOracle.decimals() == 8, "PP-ERC20 : native asset oracle decimals must be 8");
+        require(_tokenOracle.decimals() == 8, "PP-ERC20: token oracle decimals must be 8");
+        require(_nativeAssetOracle.decimals() == 8, "PP-ERC20: native asset oracle decimals must be 8");
     }
 
     /// @notice Updates the price markup and price update threshold configurations.
     /// @param _priceMarkup The new price markup percentage (1e6 = 100%).
     function updateConfig(uint32 _priceMarkup) external onlyOwner {
-        require(_priceMarkup <= 120e4, "PP-ERC20 : price markup too high");
-        require(_priceMarkup >= 1e6, "PP-ERC20 : price markeup too low");
+        require(_priceMarkup <= 120e4, "PP-ERC20: price markup too high");
+        require(_priceMarkup >= 1e6, "PP-ERC20: price markeup too low");
         priceMarkup = _priceMarkup;
         emit ConfigUpdated(_priceMarkup);
     }
@@ -94,7 +94,7 @@ contract PimlicoERC20Paymaster is BasePaymaster {
         // 3. guarantor address (20 bytes) + guarantor signature (32 bytes) or
         // 4. guarantor address (20 bytes) + guarantor signature (32 bytes) + token spend limit (32 bytes)
         uint256 length = userOp.paymasterAndData.length - 52;
-        require(length == 0 || length == 32 || length == 52 || length == 84, "PP-ERC20 : invalid data length");
+        require(length == 0 || length == 32 || length == 52 || length == 84, "PP-ERC20: invalid data length");
 
         uint192 tokenPrice = getPrice();
         uint256 maxFeePerGas = UserOperationLib.unpackMaxFeePerGas(userOp);
@@ -106,7 +106,7 @@ contract PimlicoERC20Paymaster is BasePaymaster {
             context = abi.encodePacked(tokenAmount, tokenPrice, userOp.sender);
             validationResult = 0;
         } else if (length == 32) {
-            require(maxCost <= uint256(bytes32(userOp.paymasterAndData[52:84])), "PP-ERC20 : token amount too high");
+            require(maxCost <= uint256(bytes32(userOp.paymasterAndData[52:84])), "PP-ERC20: token amount too high");
             SafeTransferLib.safeTransferFrom(address(token), userOp.sender, address(this), tokenAmount);
             context = abi.encodePacked(tokenAmount, tokenPrice, userOp.sender);
             validationResult = 0;
@@ -118,12 +118,12 @@ contract PimlicoERC20Paymaster is BasePaymaster {
 
             bool valid = SignatureChecker.isValidSignatureNow(guarantor, paymasterHash, signature);
 
-            require(valid, "PP-ERC20 : invalid signature");
+            require(valid, "PP-ERC20: invalid signature");
             SafeTransferLib.safeTransferFrom(address(token), guarantor, address(this), tokenAmount);
             context = abi.encodePacked(tokenAmount, tokenPrice, userOp.sender, guarantor);
             validationResult = 0;
         } else {
-            require(maxCost <= uint256(bytes32(userOp.paymasterAndData[104:136])), "PP-ERC20 : token amount too high");
+            require(maxCost <= uint256(bytes32(userOp.paymasterAndData[104:136])), "PP-ERC20: token amount too high");
             address guarantor = address(bytes20(userOp.paymasterAndData[52:72]));
             bytes memory signature = userOp.paymasterAndData[72:104];
 
@@ -131,7 +131,7 @@ contract PimlicoERC20Paymaster is BasePaymaster {
 
             bool valid = SignatureChecker.isValidSignatureNow(guarantor, paymasterHash, signature);
 
-            require(valid, "PP-ERC20 : invalid signature");
+            require(valid, "PP-ERC20: invalid signature");
             SafeTransferLib.safeTransferFrom(address(token), guarantor, address(this), tokenAmount);
             context = abi.encodePacked(tokenAmount, tokenPrice, userOp.sender, guarantor);
             validationResult = 0;
@@ -228,10 +228,10 @@ contract PimlicoERC20Paymaster is BasePaymaster {
     /// @return price The latest price fetched from the Oracle.
     function fetchPrice(IOracle _oracle) internal view returns (uint192 price) {
         (uint80 roundId, int256 answer,, uint256 updatedAt, uint80 answeredInRound) = _oracle.latestRoundData();
-        require(answer > 0, "PP-ERC20 : Chainlink price <= 0");
+        require(answer > 0, "PP-ERC20: Chainlink price <= 0");
         // 2 days old price is considered stale since the price is updated every 24 hours
-        require(updatedAt >= block.timestamp - 60 * 60 * 24 * 2, "PP-ERC20 : Incomplete round");
-        require(answeredInRound >= roundId, "PP-ERC20 : Stale price");
+        require(updatedAt >= block.timestamp - 60 * 60 * 24 * 2, "PP-ERC20: Incomplete round");
+        require(answeredInRound >= roundId, "PP-ERC20: Stale price");
         price = uint192(int192(answer));
     }
 
