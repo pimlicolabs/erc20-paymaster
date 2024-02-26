@@ -180,7 +180,6 @@ contract PimlicoERC20Paymaster18Test is Test {
         op.signature = signUserOp(op, userKey);
         PackedUserOperation[] memory ops = new PackedUserOperation[](1);
         ops[0] = op;
-        emit log_bytes32(bytes32(IEntryPoint.FailedOpWithRevert.selector));
         vm.expectRevert(
             abi.encodeWithSelector(
                 IEntryPoint.FailedOpWithRevert.selector, uint256(0), "AA33 reverted", "PP-ERC20 : invalid data length"
