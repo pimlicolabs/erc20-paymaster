@@ -88,15 +88,29 @@ contract PimlicoERC20Paymaster is BasePaymaster {
         override
         returns (bytes memory context, uint256 validationResult)
     {
+        // paymasterData (the data after the first 52 bytes of paymasterAndData) should either be:
+        // 1. empty
+        // 2. token spend limit (32 bytes) or
+        // 3. guarantor address (20 bytes) + guarantor signature (32 bytes) or
+        // 4. guarantor address (20 bytes) + guarantor signature (32 bytes) + token spend limit (32 bytes)
         uint256 length = userOp.paymasterAndData.length - 52;
-        require(length == 0 || userOp.paymasterAndData.length == 52, "PP-ERC20 : invalid paymaster data length");
+        require(length == 0 || length == 32 || length == 52 || length == 84, "PP-ERC20 : invalid data length");
 
         uint192 tokenPrice = getPrice();
         uint256 maxFeePerGas = UserOperationLib.unpackMaxFeePerGas(userOp);
         uint256 tokenAmount =
             (maxCost + (REFUND_POSTOP_COST) * maxFeePerGas) * priceMarkup * tokenPrice / (1e18 * priceDenominator);
 
-        if (length == 52) {
+        if (length == 0) {
+            SafeTransferLib.safeTransferFrom(address(token), userOp.sender, address(this), tokenAmount);
+            context = abi.encodePacked(tokenAmount, tokenPrice, userOp.sender);
+            validationResult = 0;
+        } else if (length == 32) {
+            require(maxCost <= uint256(bytes32(userOp.paymasterAndData[52:84])), "PP-ERC20 : token amount too high");
+            SafeTransferLib.safeTransferFrom(address(token), userOp.sender, address(this), tokenAmount);
+            context = abi.encodePacked(tokenAmount, tokenPrice, userOp.sender);
+            validationResult = 0;
+        } else if (length == 52) {
             address guarantor = address(bytes20(userOp.paymasterAndData[52:72]));
             bytes memory signature = userOp.paymasterAndData[72:104];
 
@@ -109,18 +123,26 @@ contract PimlicoERC20Paymaster is BasePaymaster {
             context = abi.encodePacked(tokenAmount, tokenPrice, userOp.sender, guarantor);
             validationResult = 0;
         } else {
-            SafeTransferLib.safeTransferFrom(address(token), userOp.sender, address(this), tokenAmount);
-            context = abi.encodePacked(tokenAmount, tokenPrice, userOp.sender);
+            require(maxCost <= uint256(bytes32(userOp.paymasterAndData[104:136])), "PP-ERC20 : token amount too high");
+            address guarantor = address(bytes20(userOp.paymasterAndData[52:72]));
+            bytes memory signature = userOp.paymasterAndData[72:104];
+
+            bytes32 paymasterHash = getHash(userOp);
+
+            bool valid = SignatureChecker.isValidSignatureNow(guarantor, paymasterHash, signature);
+
+            require(valid, "PP-ERC20 : invalid signature");
+            SafeTransferLib.safeTransferFrom(address(token), guarantor, address(this), tokenAmount);
+            context = abi.encodePacked(tokenAmount, tokenPrice, userOp.sender, guarantor);
             validationResult = 0;
         }
     }
 
     /// @notice Performs post-operation tasks, such as updating the token price and refunding excess tokens.
     /// @dev This function is called after a user operation has been executed or reverted.
-    /// @param mode The post-operation mode (either successful or reverted).
     /// @param context The context containing the token amount and user sender address.
     /// @param actualGasCost The actual gas cost of the transaction.
-    function _postOp(PostOpMode mode, bytes calldata context, uint256 actualGasCost, uint256 actualUserOpFeePerGas)
+    function _postOp(PostOpMode, bytes calldata context, uint256 actualGasCost, uint256 actualUserOpFeePerGas)
         internal
         override
     {
@@ -217,7 +239,7 @@ contract PimlicoERC20Paymaster is BasePaymaster {
      * Hash the user operation data.
      * @param userOp - The user operation data.
      */
-    function getHash(PackedUserOperation calldata userOp) public pure returns (bytes32) {
+    function getHash(PackedUserOperation calldata userOp) public view returns (bytes32) {
         address sender = userOp.getSender();
         return keccak256(
             abi.encode(
