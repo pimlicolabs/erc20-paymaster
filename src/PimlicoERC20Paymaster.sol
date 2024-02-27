@@ -12,6 +12,7 @@ import "@account-abstraction/contracts/core/EntryPoint.sol";
 import "@account-abstraction/contracts/core/UserOperationLib.sol";
 import "./utils/SafeTransferLib.sol";
 import "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
+import "forge-std/console.sol";
 
 /// @title PimlicoERC20Paymaster
 /// @notice An ERC-4337 Paymaster contract by Pimlico which is able to sponsor gas fees in exchange for ERC20 tokens.
@@ -78,6 +79,13 @@ contract PimlicoERC20Paymaster is BasePaymaster {
         SafeTransferLib.safeTransfer(address(token), to, amount);
     }
 
+    function parsePaymasterAndData(bytes calldata paymasterAndData) private pure returns (uint8, bytes calldata) {
+        if (paymasterAndData.length < 53) {
+            return (0, msg.data[0:0]);
+        }
+        return (uint8(paymasterAndData[52]), paymasterAndData[53:]);
+    }
+
     /// @notice Validates a paymaster user operation and calculates the required token amount for the transaction.
     /// @param userOp The user operation data.
     /// @param maxCost The amount of tokens required for pre-funding.
@@ -88,31 +96,38 @@ contract PimlicoERC20Paymaster is BasePaymaster {
         override
         returns (bytes memory context, uint256 validationResult)
     {
-        // paymasterData (the data after the first 52 bytes of paymasterAndData) should either be:
-        // 1. empty
-        // 2. token spend limit (32 bytes) or
-        // 3. guarantor address (20 bytes) + guarantor signature (32 bytes) or
-        // 4. guarantor address (20 bytes) + guarantor signature (32 bytes) + token spend limit (32 bytes)
-        uint256 length = userOp.paymasterAndData.length - 52;
-        require(length == 0 || length == 32 || length == 52 || length == 84, "PP-ERC20: invalid data length");
+        // paymasterData (the data after the first 52 bytes of paymasterAndData) should either be one of the following modes:
+        // 0. empty (no limit, no guarantor)
+        // 1. hex"01" + token spend limit (32 bytes) or
+        // 2. hex"02" + guarantor address (20 bytes) + guarantor signature (dynamic bytes) or
+        // 3. hex"03" + token spend limit (32 bytes) + guarantor address (20 bytes) + guarantor signature (dynamic bytes)
+        (uint8 mode, bytes calldata paymasterConfig) = parsePaymasterAndData(userOp.paymasterAndData);
+
+        require(
+            mode == uint8(0) || mode == uint8(1) || mode == uint8(2) || mode == uint8(3),
+            "PP-ERC20: invalid paymaster data mode"
+        );
 
         uint192 tokenPrice = getPrice();
-        uint256 maxFeePerGas = UserOperationLib.unpackMaxFeePerGas(userOp);
-        uint256 tokenAmount =
-            (maxCost + (REFUND_POSTOP_COST) * maxFeePerGas) * priceMarkup * tokenPrice / (1e18 * priceDenominator);
+        uint256 tokenAmount;
+        {
+            uint256 maxFeePerGas = UserOperationLib.unpackMaxFeePerGas(userOp);
+            tokenAmount =
+                (maxCost + (REFUND_POSTOP_COST) * maxFeePerGas) * priceMarkup * tokenPrice / (1e18 * priceDenominator);
+        }
 
-        if (length == 0) {
+        if (mode == uint8(0)) {
             SafeTransferLib.safeTransferFrom(address(token), userOp.sender, address(this), tokenAmount);
             context = abi.encodePacked(tokenAmount, tokenPrice, userOp.sender);
             validationResult = 0;
-        } else if (length == 32) {
-            require(maxCost <= uint256(bytes32(userOp.paymasterAndData[52:84])), "PP-ERC20: token amount too high");
+        } else if (mode == uint8(1)) {
+            require(tokenAmount <= uint256(bytes32(paymasterConfig[0:32])), "PP-ERC20: token amount too high");
             SafeTransferLib.safeTransferFrom(address(token), userOp.sender, address(this), tokenAmount);
             context = abi.encodePacked(tokenAmount, tokenPrice, userOp.sender);
             validationResult = 0;
-        } else if (length == 52) {
-            address guarantor = address(bytes20(userOp.paymasterAndData[52:72]));
-            bytes memory signature = userOp.paymasterAndData[72:104];
+        } else if (mode == uint8(2)) {
+            address guarantor = address(bytes20(paymasterConfig[0:20]));
+            bytes memory signature = paymasterConfig[20:];
 
             bytes32 paymasterHash = getHash(userOp);
 
@@ -123,9 +138,9 @@ contract PimlicoERC20Paymaster is BasePaymaster {
             context = abi.encodePacked(tokenAmount, tokenPrice, userOp.sender, guarantor);
             validationResult = 0;
         } else {
-            require(maxCost <= uint256(bytes32(userOp.paymasterAndData[104:136])), "PP-ERC20: token amount too high");
-            address guarantor = address(bytes20(userOp.paymasterAndData[52:72]));
-            bytes memory signature = userOp.paymasterAndData[72:104];
+            require(tokenAmount <= uint256(bytes32(paymasterConfig[0:32])), "PP-ERC20: token amount too high");
+            address guarantor = address(bytes20(paymasterConfig[32:52]));
+            bytes memory signature = paymasterConfig[52:];
 
             bytes32 paymasterHash = getHash(userOp);
 
@@ -194,21 +209,14 @@ contract PimlicoERC20Paymaster is BasePaymaster {
             // Store the function selector of `transferFrom(address,address,uint256)`.
             mstore(0x0c, 0x23b872dd000000000000000000000000)
 
-            if iszero(
+            success :=
                 and( // The arguments of `and` are evaluated from right to left.
                     // Set success to whether the call reverted, if not we check it either
                     // returned exactly 1 (can't just be non-zero data), or had no return data.
                     or(eq(mload(0x00), 1), iszero(returndatasize())),
                     call(gas(), _token, 0, 0x1c, 0x64, 0x00, 0x20)
                 )
-            ) {
-                success := 0
-                mstore(0x60, 0) // Restore the zero slot to zero.
-                mstore(0x40, m) // Restore the free memory pointer.
-                return(0, 0)
-            }
 
-            success := 1
             mstore(0x60, 0) // Restore the zero slot to zero.
             mstore(0x40, m) // Restore the free memory pointer.
         }
@@ -228,7 +236,7 @@ contract PimlicoERC20Paymaster is BasePaymaster {
     /// @return price The latest price fetched from the Oracle.
     function fetchPrice(IOracle _oracle) internal view returns (uint192 price) {
         (uint80 roundId, int256 answer,, uint256 updatedAt, uint80 answeredInRound) = _oracle.latestRoundData();
-        require(answer > 0, "PP-ERC20: Chainlink price <= 0");
+        require(answer > 0, "PP-ERC20: Oracle price <= 0");
         // 2 days old price is considered stale since the price is updated every 24 hours
         require(updatedAt >= block.timestamp - 60 * 60 * 24 * 2, "PP-ERC20: Incomplete round");
         require(answeredInRound >= roundId, "PP-ERC20: Stale price");
