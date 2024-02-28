@@ -49,7 +49,9 @@ contract PimlicoERC20Paymaster18Test is Test {
         nativeAssetOracle = new TestOracle();
         nativeAssetOracle.setPrice(2000_00000000);
         accountFactory = new SimpleAccountFactory(entryPoint);
-        paymaster = new PimlicoERC20Paymaster(token, entryPoint, tokenOracle, nativeAssetOracle, paymasterOperator);
+        paymaster = new PimlicoERC20Paymaster(
+            token, entryPoint, tokenOracle, nativeAssetOracle, paymasterOperator, 120e4, 100e4
+        );
         account = accountFactory.createAccount(user, 0);
         counter = new TestCounter();
         vm.deal(paymasterOperator, 1000e18);
@@ -61,8 +63,9 @@ contract PimlicoERC20Paymaster18Test is Test {
     }
 
     function testDeploy() external {
-        PimlicoERC20Paymaster testArtifact =
-            new PimlicoERC20Paymaster(token, entryPoint, tokenOracle, nativeAssetOracle, paymasterOperator);
+        PimlicoERC20Paymaster testArtifact = new PimlicoERC20Paymaster(
+            token, entryPoint, tokenOracle, nativeAssetOracle, paymasterOperator, 120e4, 100e4
+        );
         assertEq(address(testArtifact.token()), address(token));
         assertEq(address(testArtifact.entryPoint()), address(entryPoint));
         assertEq(address(testArtifact.tokenOracle()), address(tokenOracle));
@@ -77,27 +80,27 @@ contract PimlicoERC20Paymaster18Test is Test {
         vm.stopPrank();
     }
 
-    function testUpdateConfigSuccess(uint32 _priceMarkup) external {
+    function testUpdateMarkupSuccess(uint32 _priceMarkup) external {
         _priceMarkup = uint32(bound(_priceMarkup, 1e6, 12e5)); // 100% - 120%
         vm.startPrank(paymasterOperator);
-        paymaster.updateConfig(_priceMarkup);
+        paymaster.updateMarkup(_priceMarkup);
         assertEq(paymaster.priceMarkup(), _priceMarkup);
         vm.stopPrank();
     }
 
-    function testUpdateConfigFailMarkupTooLow(uint32 _priceMarkup) external {
+    function testUpdateMarkupFailMarkupTooLow(uint32 _priceMarkup) external {
         _priceMarkup = uint32(bound(_priceMarkup, 0, 1e6 - 1)); // 100% - 120%
         vm.startPrank(paymasterOperator);
         vm.expectRevert("PP-ERC20: price markeup too low");
-        paymaster.updateConfig(_priceMarkup);
+        paymaster.updateMarkup(_priceMarkup);
         vm.stopPrank();
     }
 
-    function testUpdateConfigFailMarkupTooHigh(uint32 _priceMarkup) external {
+    function testUpdateMarkupFailMarkupTooHigh(uint32 _priceMarkup) external {
         _priceMarkup = uint32(bound(_priceMarkup, 12e5 + 1, type(uint32).max)); // 100% - 120%
         vm.startPrank(paymasterOperator);
         vm.expectRevert("PP-ERC20: price markup too high");
-        paymaster.updateConfig(_priceMarkup);
+        paymaster.updateMarkup(_priceMarkup);
         vm.stopPrank();
     }
 
@@ -193,7 +196,7 @@ contract PimlicoERC20Paymaster18Test is Test {
         op.paymasterAndData = abi.encodePacked(address(paymaster), uint128(100000), uint128(50000));
         uint256 maxFeePerGas = uint256(uint128(uint256(op.gasFees)));
         uint256 limit = (getRequiredPrefund(op) + (paymaster.REFUND_POSTOP_COST() * maxFeePerGas))
-            * paymaster.priceMarkup() * paymaster.getPrice() / (1e18 * paymaster.priceDenominator());
+            * paymaster.priceMarkup() * paymaster.getPrice() / (1e18 * paymaster.PRICE_DENOMINATOR());
 
         op.paymasterAndData = abi.encodePacked(address(paymaster), uint128(100000), uint128(50000), hex"01", limit);
         op.signature = signUserOp(op, userKey);
@@ -211,7 +214,7 @@ contract PimlicoERC20Paymaster18Test is Test {
         op.paymasterAndData = abi.encodePacked(address(paymaster), uint128(100000), uint128(50000));
         uint256 maxFeePerGas = uint256(uint128(uint256(op.gasFees)));
         uint256 limit = (getRequiredPrefund(op) + (paymaster.REFUND_POSTOP_COST() * maxFeePerGas))
-            * paymaster.priceMarkup() * paymaster.getPrice() / (1e18 * paymaster.priceDenominator()) - 1;
+            * paymaster.priceMarkup() * paymaster.getPrice() / (1e18 * paymaster.PRICE_DENOMINATOR()) - 1;
 
         op.paymasterAndData = abi.encodePacked(address(paymaster), uint128(100000), uint128(50000), hex"01", limit);
         op.signature = signUserOp(op, userKey);
@@ -341,7 +344,7 @@ contract PimlicoERC20Paymaster18Test is Test {
         op.paymasterAndData = abi.encodePacked(address(paymaster), uint128(100000), uint128(50000));
         uint256 maxFeePerGas = uint256(uint128(uint256(op.gasFees)));
         uint256 limit = (getRequiredPrefund(op) + (paymaster.REFUND_POSTOP_COST() * maxFeePerGas))
-            * paymaster.priceMarkup() * paymaster.getPrice() / (1e18 * paymaster.priceDenominator());
+            * paymaster.priceMarkup() * paymaster.getPrice() / (1e18 * paymaster.PRICE_DENOMINATOR());
 
         uint48 validUntil = 0;
         uint48 validAfter = 0;
@@ -377,7 +380,7 @@ contract PimlicoERC20Paymaster18Test is Test {
         op.paymasterAndData = abi.encodePacked(address(paymaster), uint128(100000), uint128(50000));
         uint256 maxFeePerGas = uint256(uint128(uint256(op.gasFees)));
         uint256 limit = (getRequiredPrefund(op) + (paymaster.REFUND_POSTOP_COST() * maxFeePerGas))
-            * paymaster.priceMarkup() * paymaster.getPrice() / (1e18 * paymaster.priceDenominator()) - 1;
+            * paymaster.priceMarkup() * paymaster.getPrice() / (1e18 * paymaster.PRICE_DENOMINATOR()) - 1;
 
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(guarantorKey, paymaster.getHash(op, 0, 0, limit));
         bytes memory guarantorSig = abi.encodePacked(r, s, v);
@@ -410,7 +413,7 @@ contract PimlicoERC20Paymaster18Test is Test {
         op.paymasterAndData = abi.encodePacked(address(paymaster), uint128(100000), uint128(50000));
         uint256 maxFeePerGas = uint256(uint128(uint256(op.gasFees)));
         uint256 limit = (getRequiredPrefund(op) + (paymaster.REFUND_POSTOP_COST() * maxFeePerGas))
-            * paymaster.priceMarkup() * paymaster.getPrice() / (1e18 * paymaster.priceDenominator());
+            * paymaster.priceMarkup() * paymaster.getPrice() / (1e18 * paymaster.PRICE_DENOMINATOR());
 
         uint48 validUntil = uint48(0);
         uint48 validAfter = uint48(0);
