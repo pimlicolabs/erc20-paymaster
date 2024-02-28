@@ -97,9 +97,9 @@ contract PimlicoERC20Paymaster is BasePaymaster {
     {
         // paymasterData (the data after the first 52 bytes of paymasterAndData) should either be one of the following modes:
         // 0. empty (no limit, no guarantor)
-        // 1. hex"01" + token spend limit (32 bytes) or
-        // 2. hex"02" + guarantor address (20 bytes) + guarantor signature (dynamic bytes) or
-        // 3. hex"03" + token spend limit (32 bytes) + guarantor address (20 bytes) + guarantor signature (dynamic bytes)
+        // 1. hex"01" + token spend limit (32 bytes)
+        // 2. hex"02" + guarantor address (20 bytes) + validUntil (6 bytes) + validAfter (6 bytes) + guarantor signature (dynamic bytes)
+        // 3. hex"03" + token spend limit (32 bytes) + guarantor address (20 bytes) + validUntil (6 bytes) + validAfter (6 bytes) + guarantor signature (dynamic bytes)
         (uint8 mode, bytes calldata paymasterConfig) = parsePaymasterAndData(userOp.paymasterAndData);
 
         require(
@@ -126,29 +126,46 @@ contract PimlicoERC20Paymaster is BasePaymaster {
             validationResult = 0;
         } else if (mode == uint8(2)) {
             address guarantor = address(bytes20(paymasterConfig[0:20]));
-            bytes memory signature = paymasterConfig[20:];
+            uint48 validUntil = uint48(bytes6(paymasterConfig[20:26]));
+            uint48 validAfter = uint48(bytes6(paymasterConfig[26:32]));
 
-            bytes32 paymasterHash = getHash(userOp);
+            if (
+                !SignatureChecker.isValidSignatureNow(
+                    guarantor, getHash(userOp, validUntil, validAfter, 0), paymasterConfig[32:]
+                )
+            ) {
+                // don not revert on signature failure: return SIG_VALIDATION_FAILED
+                validationResult = _packValidationData(true, validUntil, validAfter);
+                return ("", validationResult);
+            }
 
-            bool valid = SignatureChecker.isValidSignatureNow(guarantor, paymasterHash, signature);
-
-            require(valid, "PP-ERC20: invalid signature");
             SafeTransferLib.safeTransferFrom(address(token), guarantor, address(this), tokenAmount);
             context = abi.encodePacked(tokenAmount, tokenPrice, userOp.sender, guarantor);
-            validationResult = 0;
+            validationResult = _packValidationData(false, validUntil, validAfter);
         } else {
-            require(tokenAmount <= uint256(bytes32(paymasterConfig[0:32])), "PP-ERC20: token amount too high");
             address guarantor = address(bytes20(paymasterConfig[32:52]));
-            bytes memory signature = paymasterConfig[52:];
+            uint48 validUntil = uint48(bytes6(paymasterConfig[52:58]));
+            uint48 validAfter = uint48(bytes6(paymasterConfig[58:64]));
 
-            bytes32 paymasterHash = getHash(userOp);
+            require(uint256(bytes32(paymasterConfig[0:32])) > 0, "PP-ERC20: token limit = 0");
+            require(tokenAmount <= uint256(bytes32(paymasterConfig[0:32])), "PP-ERC20: token amount too high");
 
-            bool valid = SignatureChecker.isValidSignatureNow(guarantor, paymasterHash, signature);
+            if (
+                !SignatureChecker.isValidSignatureNow(
+                    guarantor,
+                    getHash(userOp, validUntil, validAfter, uint256(bytes32(paymasterConfig[0:32]))),
+                    paymasterConfig[64:]
+                )
+            ) {
+                // don not revert on signature failure: return SIG_VALIDATION_FAILED
+                validationResult = _packValidationData(true, validUntil, validAfter);
+                return ("", validationResult);
+            }
 
-            require(valid, "PP-ERC20: invalid signature");
             SafeTransferLib.safeTransferFrom(address(token), guarantor, address(this), tokenAmount);
             context = abi.encodePacked(tokenAmount, tokenPrice, userOp.sender, guarantor);
             validationResult = 0;
+            validationResult = _packValidationData(false, validUntil, validAfter);
         }
     }
 
@@ -246,7 +263,11 @@ contract PimlicoERC20Paymaster is BasePaymaster {
      * Hash the user operation data.
      * @param userOp - The user operation data.
      */
-    function getHash(PackedUserOperation calldata userOp) public view returns (bytes32) {
+    function getHash(PackedUserOperation calldata userOp, uint48 validUntil, uint48 validAfter, uint256 tokenLimit)
+        public
+        view
+        returns (bytes32)
+    {
         address sender = userOp.getSender();
         return keccak256(
             abi.encode(
@@ -259,7 +280,10 @@ contract PimlicoERC20Paymaster is BasePaymaster {
                 userOp.preVerificationGas,
                 userOp.gasFees,
                 block.chainid,
-                address(this)
+                address(this),
+                validUntil,
+                validAfter,
+                tokenLimit
             )
         );
     }

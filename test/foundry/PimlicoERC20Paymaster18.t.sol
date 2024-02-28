@@ -149,7 +149,7 @@ contract PimlicoERC20Paymaster18Test is Test {
     // sanity check for everything works without paymaster
     function testCall() external {
         vm.deal(address(account), 1e18);
-        (PackedUserOperation memory op,) =
+        PackedUserOperation memory op =
             fillUserOp(account, userKey, address(counter), 0, abi.encodeWithSelector(TestCounter.count.selector));
         op.signature = signUserOp(op, userKey);
         PackedUserOperation[] memory ops = new PackedUserOperation[](1);
@@ -175,13 +175,11 @@ contract PimlicoERC20Paymaster18Test is Test {
         token.sudoMint(address(account), 1000e18); // 1000 usdc;
         token.sudoMint(address(paymaster), 1); // 1000 usdc;
         token.sudoApprove(address(account), address(paymaster), 1000e18);
-        (PackedUserOperation memory op,) =
+        PackedUserOperation memory op =
             fillUserOp(account, userKey, address(counter), 0, abi.encodeWithSelector(TestCounter.count.selector));
         op.paymasterAndData = abi.encodePacked(address(paymaster), uint128(100000), uint128(100000));
         op.signature = signUserOp(op, userKey);
-        PackedUserOperation[] memory ops = new PackedUserOperation[](1);
-        ops[0] = op;
-        entryPoint.handleOps(ops, beneficiary);
+        submitUserOp(op);
     }
 
     function testERC20PaymasterMode1Success() external {
@@ -189,7 +187,7 @@ contract PimlicoERC20Paymaster18Test is Test {
         token.sudoMint(address(account), 1000e18); // 1000 usdc;
         token.sudoMint(address(paymaster), 1000e6); // 1000 usdc;
         token.sudoApprove(address(account), address(paymaster), 1000e18);
-        (PackedUserOperation memory op,) =
+        PackedUserOperation memory op =
             fillUserOp(account, userKey, address(counter), 0, abi.encodeWithSelector(TestCounter.count.selector));
 
         op.paymasterAndData = abi.encodePacked(address(paymaster), uint128(100000), uint128(50000));
@@ -199,9 +197,7 @@ contract PimlicoERC20Paymaster18Test is Test {
 
         op.paymasterAndData = abi.encodePacked(address(paymaster), uint128(100000), uint128(50000), hex"01", limit);
         op.signature = signUserOp(op, userKey);
-        PackedUserOperation[] memory ops = new PackedUserOperation[](1);
-        ops[0] = op;
-        entryPoint.handleOps(ops, beneficiary);
+        submitUserOp(op);
     }
 
     function testERC20PaymasterMode1FailedTokenLimitExceeded() external {
@@ -209,7 +205,7 @@ contract PimlicoERC20Paymaster18Test is Test {
         token.sudoMint(address(account), 1000e18); // 1000 usdc;
         token.sudoMint(address(paymaster), 1000e6); // 1000 usdc;
         token.sudoApprove(address(account), address(paymaster), 1000e18);
-        (PackedUserOperation memory op,) =
+        PackedUserOperation memory op =
             fillUserOp(account, userKey, address(counter), 0, abi.encodeWithSelector(TestCounter.count.selector));
 
         op.paymasterAndData = abi.encodePacked(address(paymaster), uint128(100000), uint128(50000));
@@ -219,8 +215,6 @@ contract PimlicoERC20Paymaster18Test is Test {
 
         op.paymasterAndData = abi.encodePacked(address(paymaster), uint128(100000), uint128(50000), hex"01", limit);
         op.signature = signUserOp(op, userKey);
-        PackedUserOperation[] memory ops = new PackedUserOperation[](1);
-        ops[0] = op;
         vm.expectRevert(
             abi.encodeWithSelector(
                 IEntryPoint.FailedOpWithRevert.selector,
@@ -229,7 +223,7 @@ contract PimlicoERC20Paymaster18Test is Test {
                 abi.encodeWithSignature("Error(string)", "PP-ERC20: token amount too high")
             )
         );
-        entryPoint.handleOps(ops, beneficiary);
+        submitUserOp(op);
     }
 
     function testERC20PaymasterMode2Success() external {
@@ -238,20 +232,30 @@ contract PimlicoERC20Paymaster18Test is Test {
         token.sudoMint(address(paymaster), 1000e6); // 1000 usdc;
         token.sudoMint(address(guarantor), 1000e18); // 1000 usdc;
         token.sudoApprove(address(guarantor), address(paymaster), 1000e18);
-        (PackedUserOperation memory op,) = fillUserOp(
+        PackedUserOperation memory op = fillUserOp(
             account, userKey, address(token), 0, abi.encodeWithSelector(ERC20.approve.selector, paymaster, 1000e18)
         );
 
         op.paymasterAndData = abi.encodePacked(address(paymaster), uint128(100000), uint128(50000));
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(guarantorKey, paymaster.getHash(op));
+
+        uint48 validUntil = 0;
+        uint48 validAfter = 0;
+
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(guarantorKey, paymaster.getHash(op, validUntil, validAfter, 0));
         bytes memory guarantorSig = abi.encodePacked(r, s, v);
 
-        op.paymasterAndData =
-            abi.encodePacked(address(paymaster), uint128(100000), uint128(50000), hex"02", guarantor, guarantorSig);
+        op.paymasterAndData = abi.encodePacked(
+            address(paymaster),
+            uint128(100000),
+            uint128(50000),
+            hex"02",
+            guarantor,
+            validUntil,
+            validAfter,
+            guarantorSig
+        );
         op.signature = signUserOp(op, userKey);
-        PackedUserOperation[] memory ops = new PackedUserOperation[](1);
-        ops[0] = op;
-        entryPoint.handleOps(ops, beneficiary);
+        submitUserOp(op);
 
         assertEq(token.balanceOf(guarantor), 1000e18);
         assertLt(token.balanceOf(address(account)), 1000e18);
@@ -263,28 +267,31 @@ contract PimlicoERC20Paymaster18Test is Test {
         token.sudoMint(address(paymaster), 1000e6); // 1000 usdc;
         token.sudoMint(address(guarantor), 1000e18); // 1000 usdc;
         token.sudoApprove(address(guarantor), address(paymaster), 1000e18);
-        (PackedUserOperation memory op,) = fillUserOp(
+        PackedUserOperation memory op = fillUserOp(
             account, userKey, address(token), 0, abi.encodeWithSelector(ERC20.approve.selector, paymaster, 1000e18)
         );
 
         op.paymasterAndData = abi.encodePacked(address(paymaster), uint128(100000), uint128(50000));
-        (, bytes32 r, bytes32 s) = vm.sign(guarantorKey, paymaster.getHash(op));
+
+        uint48 validUntil = 0;
+        uint48 validAfter = 0;
+
+        (, bytes32 r, bytes32 s) = vm.sign(guarantorKey, paymaster.getHash(op, validUntil, validAfter, 0));
         bytes memory guarantorSig = abi.encodePacked(r, s, uint8(69)); // invalid sig
 
-        op.paymasterAndData =
-            abi.encodePacked(address(paymaster), uint128(100000), uint128(50000), hex"02", guarantor, guarantorSig);
-        op.signature = signUserOp(op, userKey);
-        PackedUserOperation[] memory ops = new PackedUserOperation[](1);
-        ops[0] = op;
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IEntryPoint.FailedOpWithRevert.selector,
-                uint256(0),
-                "AA33 reverted",
-                abi.encodeWithSignature("Error(string)", "PP-ERC20: invalid signature")
-            )
+        op.paymasterAndData = abi.encodePacked(
+            address(paymaster),
+            uint128(100000),
+            uint128(50000),
+            hex"02",
+            guarantor,
+            validUntil,
+            validAfter,
+            guarantorSig
         );
-        entryPoint.handleOps(ops, beneficiary);
+        op.signature = signUserOp(op, userKey);
+        vm.expectRevert(abi.encodeWithSelector(IEntryPoint.FailedOp.selector, uint256(0), "AA34 signature error"));
+        submitUserOp(op);
     }
 
     function testERC20PaymasterMode2SuccessGuarantorPays() external {
@@ -293,19 +300,29 @@ contract PimlicoERC20Paymaster18Test is Test {
         token.sudoMint(address(paymaster), 1000e6); // 1000 usdc;
         token.sudoMint(address(guarantor), 1000e18); // 1000 usdc;
         token.sudoApprove(address(guarantor), address(paymaster), 1000e18);
-        (PackedUserOperation memory op,) =
+        PackedUserOperation memory op =
             fillUserOp(account, userKey, address(counter), 0, abi.encodeWithSelector(TestCounter.count.selector));
 
         op.paymasterAndData = abi.encodePacked(address(paymaster), uint128(100000), uint128(50000));
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(guarantorKey, paymaster.getHash(op));
+
+        uint48 validUntil = 0;
+        uint48 validAfter = 0;
+
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(guarantorKey, paymaster.getHash(op, validUntil, validAfter, 0));
         bytes memory guarantorSig = abi.encodePacked(r, s, v);
 
-        op.paymasterAndData =
-            abi.encodePacked(address(paymaster), uint128(100000), uint128(50000), hex"02", guarantor, guarantorSig);
+        op.paymasterAndData = abi.encodePacked(
+            address(paymaster),
+            uint128(100000),
+            uint128(50000),
+            hex"02",
+            guarantor,
+            validUntil,
+            validAfter,
+            guarantorSig
+        );
         op.signature = signUserOp(op, userKey);
-        PackedUserOperation[] memory ops = new PackedUserOperation[](1);
-        ops[0] = op;
-        entryPoint.handleOps(ops, beneficiary);
+        submitUserOp(op);
 
         assertLt(token.balanceOf(guarantor), 1000e18);
         assertEq(token.balanceOf(address(account)), 1000e18);
@@ -317,7 +334,7 @@ contract PimlicoERC20Paymaster18Test is Test {
         token.sudoMint(address(paymaster), 1000e6); // 1000 usdc;
         token.sudoMint(address(guarantor), 1000e18); // 1000 usdc;
         token.sudoApprove(address(guarantor), address(paymaster), 1000e18);
-        (PackedUserOperation memory op,) = fillUserOp(
+        PackedUserOperation memory op = fillUserOp(
             account, userKey, address(token), 0, abi.encodeWithSelector(ERC20.approve.selector, paymaster, 1000e18)
         );
 
@@ -326,16 +343,25 @@ contract PimlicoERC20Paymaster18Test is Test {
         uint256 limit = (getRequiredPrefund(op) + (paymaster.REFUND_POSTOP_COST() * maxFeePerGas))
             * paymaster.priceMarkup() * paymaster.getPrice() / (1e18 * paymaster.priceDenominator());
 
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(guarantorKey, paymaster.getHash(op));
+        uint48 validUntil = 0;
+        uint48 validAfter = 0;
+
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(guarantorKey, paymaster.getHash(op, validUntil, validAfter, limit));
         bytes memory guarantorSig = abi.encodePacked(r, s, v);
 
         op.paymasterAndData = abi.encodePacked(
-            address(paymaster), uint128(100000), uint128(50000), hex"03", limit, guarantor, guarantorSig
+            address(paymaster),
+            uint128(100000),
+            uint128(50000),
+            hex"03",
+            limit,
+            guarantor,
+            validUntil,
+            validAfter,
+            guarantorSig
         );
         op.signature = signUserOp(op, userKey);
-        PackedUserOperation[] memory ops = new PackedUserOperation[](1);
-        ops[0] = op;
-        entryPoint.handleOps(ops, beneficiary);
+        submitUserOp(op);
     }
 
     function testERC20PaymasterMode3FailedTokenLimitExceeded() external {
@@ -344,7 +370,7 @@ contract PimlicoERC20Paymaster18Test is Test {
         token.sudoMint(address(paymaster), 1000e6); // 1000 usdc;
         token.sudoMint(address(guarantor), 1000e18); // 1000 usdc;
         token.sudoApprove(address(guarantor), address(paymaster), 1000e18);
-        (PackedUserOperation memory op,) = fillUserOp(
+        PackedUserOperation memory op = fillUserOp(
             account, userKey, address(token), 0, abi.encodeWithSelector(ERC20.approve.selector, paymaster, 1000e18)
         );
 
@@ -353,15 +379,13 @@ contract PimlicoERC20Paymaster18Test is Test {
         uint256 limit = (getRequiredPrefund(op) + (paymaster.REFUND_POSTOP_COST() * maxFeePerGas))
             * paymaster.priceMarkup() * paymaster.getPrice() / (1e18 * paymaster.priceDenominator()) - 1;
 
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(guarantorKey, paymaster.getHash(op));
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(guarantorKey, paymaster.getHash(op, 0, 0, limit));
         bytes memory guarantorSig = abi.encodePacked(r, s, v);
 
         op.paymasterAndData = abi.encodePacked(
             address(paymaster), uint128(100000), uint128(50000), hex"03", limit, guarantor, guarantorSig
         );
         op.signature = signUserOp(op, userKey);
-        PackedUserOperation[] memory ops = new PackedUserOperation[](1);
-        ops[0] = op;
         vm.expectRevert(
             abi.encodeWithSelector(
                 IEntryPoint.FailedOpWithRevert.selector,
@@ -370,7 +394,7 @@ contract PimlicoERC20Paymaster18Test is Test {
                 abi.encodeWithSignature("Error(string)", "PP-ERC20: token amount too high")
             )
         );
-        entryPoint.handleOps(ops, beneficiary);
+        submitUserOp(op);
     }
 
     function testERC20PaymasterMode3FailedInvalidSignature() external {
@@ -379,7 +403,7 @@ contract PimlicoERC20Paymaster18Test is Test {
         token.sudoMint(address(paymaster), 1000e6); // 1000 usdc;
         token.sudoMint(address(guarantor), 1000e18); // 1000 usdc;
         token.sudoApprove(address(guarantor), address(paymaster), 1000e18);
-        (PackedUserOperation memory op,) = fillUserOp(
+        PackedUserOperation memory op = fillUserOp(
             account, userKey, address(token), 0, abi.encodeWithSelector(ERC20.approve.selector, paymaster, 1000e18)
         );
 
@@ -388,24 +412,26 @@ contract PimlicoERC20Paymaster18Test is Test {
         uint256 limit = (getRequiredPrefund(op) + (paymaster.REFUND_POSTOP_COST() * maxFeePerGas))
             * paymaster.priceMarkup() * paymaster.getPrice() / (1e18 * paymaster.priceDenominator());
 
-        (, bytes32 r, bytes32 s) = vm.sign(guarantorKey, paymaster.getHash(op));
+        uint48 validUntil = uint48(0);
+        uint48 validAfter = uint48(0);
+
+        (, bytes32 r, bytes32 s) = vm.sign(guarantorKey, paymaster.getHash(op, validUntil, validAfter, limit));
         bytes memory guarantorSig = abi.encodePacked(r, s, uint8(69));
 
         op.paymasterAndData = abi.encodePacked(
-            address(paymaster), uint128(100000), uint128(50000), hex"03", limit, guarantor, guarantorSig
+            address(paymaster),
+            uint128(100000),
+            uint128(50000),
+            hex"03",
+            limit,
+            guarantor,
+            validUntil,
+            validAfter,
+            guarantorSig
         );
         op.signature = signUserOp(op, userKey);
-        PackedUserOperation[] memory ops = new PackedUserOperation[](1);
-        ops[0] = op;
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IEntryPoint.FailedOpWithRevert.selector,
-                uint256(0),
-                "AA33 reverted",
-                abi.encodeWithSignature("Error(string)", "PP-ERC20: invalid signature")
-            )
-        );
-        entryPoint.handleOps(ops, beneficiary);
+        vm.expectRevert(abi.encodeWithSelector(IEntryPoint.FailedOp.selector, uint256(0), "AA34 signature error"));
+        submitUserOp(op);
     }
 
     function testERC20PaymasterFailInvalidMode() external {
@@ -413,14 +439,11 @@ contract PimlicoERC20Paymaster18Test is Test {
         token.sudoMint(address(account), 1000e18); // 1000 usdc;
         token.sudoMint(address(paymaster), 1); // 1000 usdc;
         token.sudoApprove(address(account), address(paymaster), 1000e18);
-        (PackedUserOperation memory op,) =
+        PackedUserOperation memory op =
             fillUserOp(account, userKey, address(counter), 0, abi.encodeWithSelector(TestCounter.count.selector));
         op.paymasterAndData =
             abi.encodePacked(address(paymaster), bytes16(uint128(50000)), bytes16(uint128(50000)), hex"04");
         op.signature = signUserOp(op, userKey);
-        PackedUserOperation[] memory ops = new PackedUserOperation[](1);
-        ops[0] = op;
-
         vm.expectRevert(
             abi.encodeWithSelector(
                 IEntryPoint.FailedOpWithRevert.selector,
@@ -429,36 +452,13 @@ contract PimlicoERC20Paymaster18Test is Test {
                 abi.encodeWithSignature("Error(string)", "PP-ERC20: invalid paymaster data mode")
             )
         );
-        entryPoint.handleOps(ops, beneficiary);
-    }
-
-    function testERC20PaymasterPostOpFailed() external {
-        uint256 limit = 11 * 1897398591996964148 * tx.gasprice / 10000000000;
-        vm.deal(address(account), 1e18);
-        token.sudoMint(address(account), 1000e18); // 1000 usdc;
-        token.sudoMint(address(paymaster), 1); // 1000 usdc;
-        token.sudoApprove(address(account), address(paymaster), 1000e18);
-        (PackedUserOperation memory op,) = fillUserOp(
-            account,
-            userKey,
-            address(token),
-            0,
-            abi.encodeWithSelector(
-                TestERC20.sudoTransfer.selector, paymaster, beneficiary, 1897398591996964148 * tx.gasprice / 10000000000
-            )
-        );
-        op.paymasterAndData =
-            abi.encodePacked(address(paymaster), bytes16(uint128(100000)), bytes16(uint128(50000)), hex"01", limit);
-        op.signature = signUserOp(op, userKey);
-        PackedUserOperation[] memory ops = new PackedUserOperation[](1);
-        ops[0] = op;
-        entryPoint.handleOps(ops, beneficiary);
+        submitUserOp(op);
     }
 
     function fillUserOp(SimpleAccount _sender, uint256 _key, address _to, uint256 _value, bytes memory _data)
         public
         view
-        returns (PackedUserOperation memory op, uint256 prefund)
+        returns (PackedUserOperation memory op)
     {
         op.sender = address(_sender);
         op.nonce = entryPoint.getNonce(address(_sender), 0);
@@ -467,12 +467,18 @@ contract PimlicoERC20Paymaster18Test is Test {
         op.preVerificationGas = 50000;
         op.gasFees = bytes32(abi.encodePacked(bytes16(uint128(100)), bytes16(uint128(1000000000))));
         op.signature = signUserOp(op, _key);
-        return (op, 0);
+        return op;
     }
 
     function signUserOp(PackedUserOperation memory op, uint256 _key) public view returns (bytes memory signature) {
         bytes32 hash = entryPoint.getUserOpHash(op);
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(_key, MessageHashUtils.toEthSignedMessageHash(hash));
         signature = abi.encodePacked(r, s, v);
+    }
+
+    function submitUserOp(PackedUserOperation memory op) public {
+        PackedUserOperation[] memory ops = new PackedUserOperation[](1);
+        ops[0] = op;
+        entryPoint.handleOps(ops, beneficiary);
     }
 }
