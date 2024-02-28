@@ -92,7 +92,11 @@ contract PimlicoERC20Paymaster is BasePaymaster {
 
     /// @notice Emitted when a user operation is sponsored by the paymaster.
     event UserOperationSponsored(
-        address indexed user, address indexed guarantor, uint256 tokenAmountPaid, uint256 tokenPrice, bool guarantorPaid
+        address indexed user,
+        address indexed guarantor,
+        uint256 tokenAmountPaid,
+        uint256 tokenPrice,
+        bool paidByGuarantor
     );
 
     /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
