@@ -27,8 +27,8 @@ contract PimlicoERC20Paymaster is BasePaymaster {
     /*                       CUSTOM ERRORS                        */
     /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
-    /// @dev The paymaster data mode is invalid.
-    error InvalidPaymasterDataMode();
+    /// @dev The paymaster data mode is invalid. The mode should be 0, 1, 2, or 3.
+    error PaymasterDataModeInvalid();
 
     /// @dev The token amount is higher than the limit set.
     error TokenAmountTooHigh();
@@ -43,13 +43,16 @@ contract PimlicoERC20Paymaster is BasePaymaster {
     error PriceMarkupTooLow();
 
     /// @dev The oracle price is incomplete.
-    error IncompleteOracleRound();
+    error OracleRoundIncomplete();
 
     /// @dev The oracle price is stale.
-    error StaleOraclePrice();
+    error OraclePriceStale();
 
     /// @dev The oracle price is less than or equal to zero.
     error OraclePriceZero();
+
+    /// @dev The oracle decimals are not set to 8.
+    error OracleDecimalsInvalid();
 
     /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
     /*                  CONSTANTS AND IMMUTABLES                  */
@@ -127,8 +130,15 @@ contract PimlicoERC20Paymaster is BasePaymaster {
         priceMarkup = _priceMarkup;
         transferOwnership(_owner);
         tokenDecimals = 10 ** _token.decimals();
-        require(_tokenOracle.decimals() == 8, "PP-ERC20: token oracle decimals must be 8");
-        require(_nativeAssetOracle.decimals() == 8, "PP-ERC20: native asset oracle decimals must be 8");
+        if (_priceMarkup < 1e6) {
+            revert PriceMarkupTooLow();
+        }
+        if (_priceMarkup > _priceMarkupLimit) {
+            revert PriceMarkupTooHigh();
+        }
+        if (_tokenOracle.decimals() != 8 || _nativeAssetOracle.decimals() != 8) {
+            revert OracleDecimalsInvalid();
+        }
     }
 
     /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
@@ -152,10 +162,10 @@ contract PimlicoERC20Paymaster is BasePaymaster {
         // 3. hex"03" + token spend limit (32 bytes) + guarantor address (20 bytes) + validUntil (6 bytes) + validAfter (6 bytes) + guarantor signature (dynamic bytes)
         (uint8 mode, bytes calldata paymasterConfig) = _parsePaymasterAndData(userOp.paymasterAndData);
 
-        require(
-            mode == uint8(0) || mode == uint8(1) || mode == uint8(2) || mode == uint8(3),
-            "PP-ERC20: invalid paymaster data mode"
-        );
+        // 0xfc is the mask for the last 2 bits 00 which means mode should be 00(0) || 01(1) || 10(2) || 11(3)
+        if (mode & 0xfc != 0) {
+            revert PaymasterDataModeInvalid();
+        }
 
         uint192 tokenPrice = getPrice();
         uint256 tokenAmount;
@@ -170,8 +180,12 @@ contract PimlicoERC20Paymaster is BasePaymaster {
             context = abi.encodePacked(tokenAmount, tokenPrice, userOp.sender);
             validationResult = 0;
         } else if (mode == uint8(1)) {
-            require(uint256(bytes32(paymasterConfig[0:32])) > 0, "PP-ERC20: token limit = 0");
-            require(tokenAmount <= uint256(bytes32(paymasterConfig[0:32])), "PP-ERC20: token amount too high");
+            if (uint256(bytes32(paymasterConfig[0:32])) == 0) {
+                revert TokenLimitZero();
+            }
+            if (tokenAmount > uint256(bytes32(paymasterConfig[0:32]))) {
+                revert TokenAmountTooHigh();
+            }
             SafeTransferLib.safeTransferFrom(address(token), userOp.sender, address(this), tokenAmount);
             context = abi.encodePacked(tokenAmount, tokenPrice, userOp.sender);
             validationResult = 0;
@@ -198,8 +212,12 @@ contract PimlicoERC20Paymaster is BasePaymaster {
             uint48 validUntil = uint48(bytes6(paymasterConfig[52:58]));
             uint48 validAfter = uint48(bytes6(paymasterConfig[58:64]));
 
-            require(uint256(bytes32(paymasterConfig[0:32])) > 0, "PP-ERC20: token limit = 0");
-            require(tokenAmount <= uint256(bytes32(paymasterConfig[0:32])), "PP-ERC20: token amount too high");
+            if (uint256(bytes32(paymasterConfig[0:32])) == 0) {
+                revert TokenLimitZero();
+            }
+            if (tokenAmount > uint256(bytes32(paymasterConfig[0:32]))) {
+                revert TokenAmountTooHigh();
+            }
 
             if (
                 !SignatureChecker.isValidSignatureNow(
@@ -260,8 +278,12 @@ contract PimlicoERC20Paymaster is BasePaymaster {
     /// @notice Updates the price markup.
     /// @param _priceMarkup The new price markup percentage (1e6 = 100%).
     function updateMarkup(uint32 _priceMarkup) external onlyOwner {
-        require(_priceMarkup <= priceMarkupLimit, "PP-ERC20: price markup too high");
-        require(_priceMarkup >= 1e6, "PP-ERC20: price markeup too low");
+        if (_priceMarkup < 1e6) {
+            revert PriceMarkupTooLow();
+        }
+        if (_priceMarkup > priceMarkupLimit) {
+            revert PriceMarkupTooHigh();
+        }
         priceMarkup = _priceMarkup;
         emit MarkupUpdated(_priceMarkup);
     }
@@ -375,10 +397,16 @@ contract PimlicoERC20Paymaster is BasePaymaster {
     /// @return price The latest price fetched from the oracle.
     function _fetchPrice(IOracle _oracle) internal view returns (uint192 price) {
         (uint80 roundId, int256 answer,, uint256 updatedAt, uint80 answeredInRound) = _oracle.latestRoundData();
-        require(answer > 0, "PP-ERC20: Oracle price <= 0");
+        if (answer <= 0) {
+            revert OraclePriceZero();
+        }
         // 2 days old price is considered stale since the price is updated every 24 hours
-        require(updatedAt >= block.timestamp - 60 * 60 * 24 * 2, "PP-ERC20: Incomplete round");
-        require(answeredInRound >= roundId, "PP-ERC20: Stale price");
+        if (updatedAt < block.timestamp - 60 * 60 * 24 * 2) {
+            revert OracleRoundIncomplete();
+        }
+        if (answeredInRound < roundId) {
+            revert OraclePriceStale();
+        }
         price = uint192(int192(answer));
     }
 }

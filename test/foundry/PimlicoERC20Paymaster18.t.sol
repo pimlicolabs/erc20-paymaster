@@ -91,7 +91,7 @@ contract PimlicoERC20Paymaster18Test is Test {
     function testUpdateMarkupFailMarkupTooLow(uint32 _priceMarkup) external {
         _priceMarkup = uint32(bound(_priceMarkup, 0, 1e6 - 1)); // 100% - 120%
         vm.startPrank(paymasterOperator);
-        vm.expectRevert("PP-ERC20: price markeup too low");
+        vm.expectRevert(PimlicoERC20Paymaster.PriceMarkupTooLow.selector);
         paymaster.updateMarkup(_priceMarkup);
         vm.stopPrank();
     }
@@ -99,7 +99,7 @@ contract PimlicoERC20Paymaster18Test is Test {
     function testUpdateMarkupFailMarkupTooHigh(uint32 _priceMarkup) external {
         _priceMarkup = uint32(bound(_priceMarkup, 12e5 + 1, type(uint32).max)); // 100% - 120%
         vm.startPrank(paymasterOperator);
-        vm.expectRevert("PP-ERC20: price markup too high");
+        vm.expectRevert(PimlicoERC20Paymaster.PriceMarkupTooHigh.selector);
         paymaster.updateMarkup(_priceMarkup);
         vm.stopPrank();
     }
@@ -132,20 +132,20 @@ contract PimlicoERC20Paymaster18Test is Test {
 
     function testGetPriceFailZeroPrice() external {
         nativeAssetOracle.setPrice(0);
-        vm.expectRevert("PP-ERC20: Oracle price <= 0");
+        vm.expectRevert(PimlicoERC20Paymaster.OraclePriceZero.selector);
         paymaster.getPrice();
     }
 
     function testGetPriceFailStalePrice() external {
         (,,,, uint80 answeredInRound) = nativeAssetOracle.latestRoundData();
         nativeAssetOracle.setRoundId(answeredInRound + 1);
-        vm.expectRevert("PP-ERC20: Stale price");
+        vm.expectRevert(PimlicoERC20Paymaster.OraclePriceStale.selector);
         paymaster.getPrice();
     }
 
     function testGetPriceFailIncompleteRound() external {
         nativeAssetOracle.setUpdatedAtDelay(3 * 24 * 60 * 60);
-        vm.expectRevert("PP-ERC20: Incomplete round");
+        vm.expectRevert(PimlicoERC20Paymaster.OracleRoundIncomplete.selector);
         paymaster.getPrice();
     }
 
@@ -223,7 +223,7 @@ contract PimlicoERC20Paymaster18Test is Test {
                 IEntryPoint.FailedOpWithRevert.selector,
                 uint256(0),
                 "AA33 reverted",
-                abi.encodeWithSignature("Error(string)", "PP-ERC20: token amount too high")
+                abi.encodeWithSelector(PimlicoERC20Paymaster.TokenAmountTooHigh.selector)
             )
         );
         submitUserOp(op);
@@ -394,7 +394,7 @@ contract PimlicoERC20Paymaster18Test is Test {
                 IEntryPoint.FailedOpWithRevert.selector,
                 uint256(0),
                 "AA33 reverted",
-                abi.encodeWithSignature("Error(string)", "PP-ERC20: token amount too high")
+                abi.encodeWithSelector(PimlicoERC20Paymaster.TokenAmountTooHigh.selector)
             )
         );
         submitUserOp(op);
@@ -452,7 +452,7 @@ contract PimlicoERC20Paymaster18Test is Test {
                 IEntryPoint.FailedOpWithRevert.selector,
                 uint256(0),
                 "AA33 reverted",
-                abi.encodeWithSignature("Error(string)", "PP-ERC20: invalid paymaster data mode")
+                abi.encodeWithSelector(PimlicoERC20Paymaster.PaymasterDataModeInvalid.selector)
             )
         );
         submitUserOp(op);
