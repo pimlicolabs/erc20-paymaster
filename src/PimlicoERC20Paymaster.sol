@@ -164,7 +164,6 @@ contract PimlicoERC20Paymaster is BasePaymaster {
 
             SafeTransferLib.safeTransferFrom(address(token), guarantor, address(this), tokenAmount);
             context = abi.encodePacked(tokenAmount, tokenPrice, userOp.sender, guarantor);
-            validationResult = 0;
             validationResult = _packValidationData(false, validUntil, validAfter);
         }
     }
