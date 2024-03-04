@@ -308,8 +308,8 @@ contract ERC20Paymaster is BasePaymaster {
     /// @return price The latest token price fetched from the oracles.
     function getPrice() public view returns (uint192) {
         uint192 tokenPrice = _fetchPrice(tokenOracle);
-        uint192 nativeAsset = _fetchPrice(nativeAssetOracle);
-        uint192 price = nativeAsset * uint192(tokenDecimals) / tokenPrice;
+        uint192 nativeAssetPrice = _fetchPrice(nativeAssetOracle);
+        uint192 price = nativeAssetPrice * uint192(tokenDecimals) / tokenPrice;
 
         return price;
     }
