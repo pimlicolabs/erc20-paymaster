@@ -157,10 +157,14 @@ contract ERC20Paymaster is BasePaymaster {
         returns (bytes memory context, uint256 validationResult)
     {
         // paymasterData (the data after the first 52 bytes of paymasterAndData) should either be one of the following modes:
-        // 0. empty (no limit, no guarantor)
-        // 1. hex"01" + token spend limit (32 bytes)
-        // 2. hex"02" + guarantor address (20 bytes) + validUntil (6 bytes) + validAfter (6 bytes) + guarantor signature (dynamic bytes)
-        // 3. hex"03" + token spend limit (32 bytes) + guarantor address (20 bytes) + validUntil (6 bytes) + validAfter (6 bytes) + guarantor signature (dynamic bytes)
+        // 0. user pays, no limit
+        //     empty bytes
+        // 1. user pays, with a limit
+        //     hex"01" + token spend limit (32 bytes)
+        // 2. user pays with a guarantor, no limit
+        //     hex"02" + guarantor address (20 bytes) + validUntil (6 bytes) + validAfter (6 bytes) + guarantor signature (dynamic bytes)
+        // 3. user pays with a guarantor, with a limit
+        //     hex"03" + token spend limit (32 bytes) + guarantor address (20 bytes) + validUntil (6 bytes) + validAfter (6 bytes) + guarantor signature (dynamic bytes)
         (uint8 mode, bytes calldata paymasterConfig) = _parsePaymasterAndData(userOp.paymasterAndData);
 
         // 0xfc is the mask for the last 2 bits 00 which means mode should be 00(0) || 01(1) || 10(2) || 11(3)
