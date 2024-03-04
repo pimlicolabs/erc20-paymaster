@@ -255,7 +255,7 @@ contract ERC20Paymaster is BasePaymaster {
         uint192 tokenPrice = uint192(bytes24(context[32:56]));
         address sender = address(bytes20(context[56:76]));
         uint256 actualTokenNeeded = (actualGasCost + REFUND_POSTOP_COST * actualUserOpFeePerGas) * priceMarkup
-            * tokenPrice / (1e18 * PRICE_DENOMINATOR); // We use tx.gasprice here since we don't know the actual gas price used by the user
+            * tokenPrice / (1e18 * PRICE_DENOMINATOR);
 
         if (context.length == 96) {
             address guarantor = address(bytes20(context[76:96]));
