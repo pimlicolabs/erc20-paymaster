@@ -13,6 +13,8 @@ import "@account-abstraction/contracts/core/UserOperationLib.sol";
 import "./utils/SafeTransferLib.sol";
 import "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
 
+using UserOperationLib for PackedUserOperation;
+
 /// @title ERC20Paymaster
 /// @author Pimlico
 /// @notice An ERC-4337 Paymaster contract by Pimlico which is able to sponsor gas fees in exchange for ERC20 tokens.
@@ -22,8 +24,6 @@ import "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
 /// @dev Inherits from BasePaymaster.
 ///
 contract ERC20Paymaster is BasePaymaster {
-    using UserOperationLib for PackedUserOperation;
-
     /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
     /*                       CUSTOM ERRORS                        */
     /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
@@ -147,7 +147,16 @@ contract ERC20Paymaster is BasePaymaster {
     /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
     /// @notice Validates a paymaster user operation and calculates the required token amount for the transaction.
-    /// @param userOp The user operation data.
+    /// @dev The paymaster supports one of four modes:
+    /// 0. user pays, no limit
+    ///     empty bytes
+    /// 1. user pays, with a limit
+    ///     hex"01" + token spend limit (32 bytes)
+    /// 2. user pays with a guarantor, no limit
+    ///     hex"02" + guarantor address (20 bytes) + validUntil (6 bytes) + validAfter (6 bytes) + guarantor signature (dynamic bytes)
+    /// 3. user pays with a guarantor, with a limit
+    ///     hex"03" + token spend limit (32 bytes) + guarantor address (20 bytes) + validUntil (6 bytes) + validAfter (6 bytes) + guarantor signature (dynamic bytes)
+    /// @param userOp The user operation.
     /// @param maxCost The amount of tokens required for pre-funding.
     /// @return context The context containing the token amount and user sender address (if applicable).
     /// @return validationResult A uint256 value indicating the result of the validation (always 0 in this implementation).
@@ -156,15 +165,6 @@ contract ERC20Paymaster is BasePaymaster {
         override
         returns (bytes memory context, uint256 validationResult)
     {
-        // paymasterData (the data after the first 52 bytes of paymasterAndData) should either be one of the following modes:
-        // 0. user pays, no limit
-        //     empty bytes
-        // 1. user pays, with a limit
-        //     hex"01" + token spend limit (32 bytes)
-        // 2. user pays with a guarantor, no limit
-        //     hex"02" + guarantor address (20 bytes) + validUntil (6 bytes) + validAfter (6 bytes) + guarantor signature (dynamic bytes)
-        // 3. user pays with a guarantor, with a limit
-        //     hex"03" + token spend limit (32 bytes) + guarantor address (20 bytes) + validUntil (6 bytes) + validAfter (6 bytes) + guarantor signature (dynamic bytes)
         (uint8 mode, bytes calldata paymasterConfig) = _parsePaymasterAndData(userOp.paymasterAndData);
 
         // 0xfc is the mask for the last 2 bits 00 which means mode should be 00(0) || 01(1) || 10(2) || 11(3)
