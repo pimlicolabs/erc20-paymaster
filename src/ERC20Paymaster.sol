@@ -13,14 +13,15 @@ import "@account-abstraction/contracts/core/UserOperationLib.sol";
 import "./utils/SafeTransferLib.sol";
 import "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
 
-/// @title PimlicoERC20Paymaster
+/// @title ERC20Paymaster
+/// @author Pimlico
 /// @notice An ERC-4337 Paymaster contract by Pimlico which is able to sponsor gas fees in exchange for ERC20 tokens.
 /// The contract refunds excess tokens if the actual gas cost is lower than the initially provided amount.
 /// It also allows updating price configuration and withdrawing tokens by the contract owner.
 /// The contract uses an Oracle to fetch the latest token prices.
 /// @dev Inherits from BasePaymaster.
 ///
-contract PimlicoERC20Paymaster is BasePaymaster {
+contract ERC20Paymaster is BasePaymaster {
     using UserOperationLib for PackedUserOperation;
 
     /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
@@ -55,6 +56,22 @@ contract PimlicoERC20Paymaster is BasePaymaster {
     error OracleDecimalsInvalid();
 
     /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+    /*                           EVENTS                           */
+    /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
+    /// @notice Emitted when the price markup is updated.
+    event MarkupUpdated(uint32 priceMarkup);
+
+    /// @notice Emitted when a user operation is sponsored by the paymaster.
+    event UserOperationSponsored(
+        address indexed user,
+        address indexed guarantor,
+        uint256 tokenAmountPaid,
+        uint256 tokenPrice,
+        bool paidByGuarantor
+    );
+
+    /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
     /*                  CONSTANTS AND IMMUTABLES                  */
     /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
@@ -85,22 +102,6 @@ contract PimlicoERC20Paymaster is BasePaymaster {
 
     /// @dev The price markup percentage applied to the token price (1e6 = 100%).
     uint32 public priceMarkup;
-
-    /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
-    /*                           EVENTS                           */
-    /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
-
-    /// @notice Emitted when the price markup is updated.
-    event MarkupUpdated(uint32 priceMarkup);
-
-    /// @notice Emitted when a user operation is sponsored by the paymaster.
-    event UserOperationSponsored(
-        address indexed user,
-        address indexed guarantor,
-        uint256 tokenAmountPaid,
-        uint256 tokenPrice,
-        bool paidByGuarantor
-    );
 
     /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
     /*                        CONSTRUCTOR                         */
