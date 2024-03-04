@@ -260,7 +260,7 @@ contract ERC20Paymaster is BasePaymaster {
         if (context.length == 96) {
             address guarantor = address(bytes20(context[76:96]));
 
-            bool success = _safeTransferFrom(address(token), sender, address(this), actualTokenNeeded);
+            bool success = SafeTransferLib.trySafeTransferFrom(address(token), sender, address(this), actualTokenNeeded);
             if (success) {
                 // If the token transfer is successful, transfer the held tokens back to the guarantor
                 SafeTransferLib.safeTransfer(address(token), guarantor, prefundTokenAmount);
@@ -347,43 +347,6 @@ contract ERC20Paymaster is BasePaymaster {
     /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
     /*                      INTERNAL HELPERS                      */
     /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
-
-    /// @notice Sends `amount` of ERC20 `token` from the contract to `to`.
-    /// @dev Doesn't revert on failure, but returns false.
-    /// The `from` account must have at least `amount` approved for
-    /// the current contract to manage.
-    /// See https://github.com/Vectorized/solady/blob/main/src/utils/SafeTransferLib.sol
-    /// @param _token The ERC20 token to transfer.
-    /// @param _from The address to transfer the tokens from.
-    /// @param _to The address to transfer the tokens to.
-    /// @param _amount The amount of tokens to transfer.
-    /// @return success Whether the transfer was successful.
-    function _safeTransferFrom(address _token, address _from, address _to, uint256 _amount)
-        internal
-        returns (bool success)
-    {
-        // solhint-disable-next-line no-inline-assembly
-        assembly {
-            let m := mload(0x40) // Cache the free memory pointer.
-
-            mstore(0x60, _amount) // Store the `amount` argument.
-            mstore(0x40, _to) // Store the `to` argument.
-            mstore(0x2c, shl(96, _from)) // Store the `from` argument.
-            // Store the function selector of `transferFrom(address,address,uint256)`.
-            mstore(0x0c, 0x23b872dd000000000000000000000000)
-
-            success :=
-                and( // The arguments of `and` are evaluated from right to left.
-                    // Set success to whether the call reverted, if not we check it either
-                    // returned exactly 1 (can't just be non-zero data), or had no return data.
-                    or(eq(mload(0x00), 1), iszero(returndatasize())),
-                    call(gas(), _token, 0, 0x1c, 0x64, 0x00, 0x20)
-                )
-
-            mstore(0x60, 0) // Restore the zero slot to zero.
-            mstore(0x40, m) // Restore the free memory pointer.
-        }
-    }
 
     /// @notice Parses the paymasterAndData field of the user operation and returns the paymaster mode and data.
     /// @param _paymasterAndData The paymasterAndData field of the user operation.
