@@ -64,6 +64,7 @@ contract ERC20Paymaster is BasePaymaster {
 
     /// @notice Emitted when a user operation is sponsored by the paymaster.
     event UserOperationSponsored(
+        bytes32 indexed userOpHash,
         address indexed user,
         address indexed guarantor,
         uint256 tokenAmountPaid,
@@ -157,10 +158,11 @@ contract ERC20Paymaster is BasePaymaster {
     /// 3. user pays with a guarantor, with a limit
     ///     hex"03" + token spend limit (32 bytes) + guarantor address (20 bytes) + validUntil (6 bytes) + validAfter (6 bytes) + guarantor signature (dynamic bytes)
     /// @param userOp The user operation.
+    /// @param userOpHash The hash of the user operation.
     /// @param maxCost The amount of tokens required for pre-funding.
     /// @return context The context containing the token amount and user sender address (if applicable).
     /// @return validationResult A uint256 value indicating the result of the validation (always 0 in this implementation).
-    function _validatePaymasterUserOp(PackedUserOperation calldata userOp, bytes32, uint256 maxCost)
+    function _validatePaymasterUserOp(PackedUserOperation calldata userOp, bytes32 userOpHash, uint256 maxCost)
         internal
         override
         returns (bytes memory context, uint256 validationResult)
@@ -182,7 +184,7 @@ contract ERC20Paymaster is BasePaymaster {
 
         if (mode == uint8(0)) {
             SafeTransferLib.safeTransferFrom(address(token), userOp.sender, address(this), tokenAmount);
-            context = abi.encodePacked(tokenAmount, tokenPrice, userOp.sender);
+            context = abi.encodePacked(tokenAmount, tokenPrice, userOp.sender, userOpHash);
             validationResult = 0;
         } else if (mode == uint8(1)) {
             if (uint256(bytes32(paymasterConfig[0:32])) == 0) {
@@ -192,7 +194,7 @@ contract ERC20Paymaster is BasePaymaster {
                 revert TokenAmountTooHigh();
             }
             SafeTransferLib.safeTransferFrom(address(token), userOp.sender, address(this), tokenAmount);
-            context = abi.encodePacked(tokenAmount, tokenPrice, userOp.sender);
+            context = abi.encodePacked(tokenAmount, tokenPrice, userOp.sender, userOpHash);
             validationResult = 0;
         } else if (mode == uint8(2)) {
             address guarantor = address(bytes20(paymasterConfig[0:20]));
@@ -204,13 +206,13 @@ contract ERC20Paymaster is BasePaymaster {
                     guarantor, getHash(userOp, validUntil, validAfter, 0), paymasterConfig[32:]
                 )
             ) {
-                // don not revert on signature failure: return SIG_VALIDATION_FAILED
+                // do not revert on signature failure
                 validationResult = _packValidationData(true, validUntil, validAfter);
                 return ("", validationResult);
             }
 
             SafeTransferLib.safeTransferFrom(address(token), guarantor, address(this), tokenAmount);
-            context = abi.encodePacked(tokenAmount, tokenPrice, userOp.sender, guarantor);
+            context = abi.encodePacked(tokenAmount, tokenPrice, userOp.sender, userOpHash, guarantor);
             validationResult = _packValidationData(false, validUntil, validAfter);
         } else {
             address guarantor = address(bytes20(paymasterConfig[32:52]));
@@ -231,13 +233,13 @@ contract ERC20Paymaster is BasePaymaster {
                     paymasterConfig[64:]
                 )
             ) {
-                // don not revert on signature failure: return SIG_VALIDATION_FAILED
+                // do not revert on signature failure
                 validationResult = _packValidationData(true, validUntil, validAfter);
                 return ("", validationResult);
             }
 
             SafeTransferLib.safeTransferFrom(address(token), guarantor, address(this), tokenAmount);
-            context = abi.encodePacked(tokenAmount, tokenPrice, userOp.sender, guarantor);
+            context = abi.encodePacked(tokenAmount, tokenPrice, userOp.sender, userOpHash, guarantor);
             validationResult = _packValidationData(false, validUntil, validAfter);
         }
     }
@@ -254,25 +256,26 @@ contract ERC20Paymaster is BasePaymaster {
         uint256 prefundTokenAmount = uint256(bytes32(context[0:32]));
         uint192 tokenPrice = uint192(bytes24(context[32:56]));
         address sender = address(bytes20(context[56:76]));
+        bytes32 userOpHash = bytes32(context[76:108]);
         uint256 actualTokenNeeded = (actualGasCost + REFUND_POSTOP_COST * actualUserOpFeePerGas) * priceMarkup
             * tokenPrice / (1e18 * PRICE_DENOMINATOR);
 
-        if (context.length == 96) {
-            address guarantor = address(bytes20(context[76:96]));
+        if (context.length == 128) {
+            address guarantor = address(bytes20(context[108:128]));
 
             bool success = SafeTransferLib.trySafeTransferFrom(address(token), sender, address(this), actualTokenNeeded);
             if (success) {
                 // If the token transfer is successful, transfer the held tokens back to the guarantor
                 SafeTransferLib.safeTransfer(address(token), guarantor, prefundTokenAmount);
-                emit UserOperationSponsored(sender, guarantor, actualTokenNeeded, tokenPrice, false);
+                emit UserOperationSponsored(userOpHash, sender, guarantor, actualTokenNeeded, tokenPrice, false);
             } else {
                 // If the token transfer fails, the guarantor is deemed responsible for the token payment
                 SafeTransferLib.safeTransfer(address(token), guarantor, prefundTokenAmount - actualTokenNeeded);
-                emit UserOperationSponsored(sender, guarantor, actualTokenNeeded, tokenPrice, true);
+                emit UserOperationSponsored(userOpHash, sender, guarantor, actualTokenNeeded, tokenPrice, true);
             }
         } else {
             SafeTransferLib.safeTransfer(address(token), sender, prefundTokenAmount - actualTokenNeeded);
-            emit UserOperationSponsored(sender, address(0), actualTokenNeeded, tokenPrice, false);
+            emit UserOperationSponsored(userOpHash, sender, address(0), actualTokenNeeded, tokenPrice, false);
         }
     }
 
