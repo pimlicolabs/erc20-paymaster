@@ -236,7 +236,6 @@ contract ERC20Paymaster18Test is Test {
             fillUserOp(account, userKey, address(counter), 0, abi.encodeWithSelector(TestCounter.count.selector));
 
         op.paymasterAndData = abi.encodePacked(address(paymaster), uint128(100000), uint128(50000));
-        uint256 maxFeePerGas = uint256(uint128(uint256(op.gasFees)));
         uint256 limit = 0;
 
         op.paymasterAndData = abi.encodePacked(address(paymaster), uint128(100000), uint128(50000), hex"01", limit);
@@ -434,7 +433,6 @@ contract ERC20Paymaster18Test is Test {
         );
 
         op.paymasterAndData = abi.encodePacked(address(paymaster), uint128(100000), uint128(50000));
-        uint256 maxFeePerGas = uint256(uint128(uint256(op.gasFees)));
         uint256 limit = 0;
 
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(guarantorKey, paymaster.getHash(op, 0, 0, limit));
