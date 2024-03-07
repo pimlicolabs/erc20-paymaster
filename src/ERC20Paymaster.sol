@@ -18,9 +18,8 @@ using UserOperationLib for PackedUserOperation;
 /// @title ERC20Paymaster
 /// @author Pimlico
 /// @notice An ERC-4337 Paymaster contract by Pimlico which is able to sponsor gas fees in exchange for ERC20 tokens.
-/// The contract refunds excess tokens if the actual gas cost is lower than the initially provided amount.
-/// It also allows updating price configuration and withdrawing tokens by the contract owner.
-/// The contract uses an Oracle to fetch the latest token prices.
+/// The contract refunds excess tokens. It also allows updating price configuration and withdrawing tokens by the contract owner.
+/// The contract uses oracles to fetch the latest token prices.
 /// @dev Inherits from BasePaymaster.
 ///
 contract ERC20Paymaster is BasePaymaster {
@@ -157,6 +156,7 @@ contract ERC20Paymaster is BasePaymaster {
     ///     hex"02" + guarantor address (20 bytes) + validUntil (6 bytes) + validAfter (6 bytes) + guarantor signature (dynamic bytes)
     /// 3. user pays with a guarantor, with a limit
     ///     hex"03" + token spend limit (32 bytes) + guarantor address (20 bytes) + validUntil (6 bytes) + validAfter (6 bytes) + guarantor signature (dynamic bytes)
+    /// NOTE: modes 2 and 3 are not compatible with the default storage access rules of ERC-4337 and require a whitelist for the guarantors.
     /// @param userOp The user operation.
     /// @param userOpHash The hash of the user operation.
     /// @param maxCost The amount of tokens required for pre-funding.
