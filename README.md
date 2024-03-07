@@ -1,16 +1,18 @@
-# Pimlico ERC20 Paymaster
+# `ERC20Paymaster` contract
+
 ## Overview
-PimlicoERC20Paymaster is an ERC-4337 Paymaster contract by Pimlico which is able to sponsor gas fees in exchange for ERC20 tokens. The contract refunds excess tokens if the actual gas cost is lower than the initially provided amount. It also allows updating price configuration and withdrawing tokens by the contract owner. The contract uses an Oracle to fetch the latest token prices.
+
+This repository contains an ERC-4337 paymaster implementation allowing users to pay for gas fees with ERC-20 tokens, leveraging an oracle to fetch latest prices. The contract takes the max fee during the paymaster validation step, and refunds excess tokens if the actual gas cost is lower than the initially provided amount. It also allows updating price configuration and withdrawing tokens by the contract owner.
 
 ## Features
-- ERC20 token payments for transaction fees
+- ERC-20 token payments for transaction fees
 - Refunding excess tokens based on actual gas cost
 - Updating price configuration
 - Withdrawing tokens by contract owner
 - Fetching latest token prices using an Oracle
 
 ## Contract
-The PimlicoERC20Paymaster contract inherits from BasePaymaster.
+The ERC20Paymaster contract inherits from BasePaymaster.
 
 ### Functions
 - constructor: Initializes the PimlicoERC20Paymaster contract with the given parameters.
@@ -29,29 +31,15 @@ If necessary, the contract owner can withdraw tokens using the withdrawToken fun
 To update the token price, call the updatePrice function.
 For more information, please refer to the comments within the contract source code.
 
-## Development setup
+## Development
 
-This repository uses both hardhat and foundry for development, and assumes you have already installed hardhat/foundry
+This repository uses Foundry and Halmos for development.
 
-### hardhat
+### Foundry
 
-Hardhat is used for gas metering and developing sdk.
+Run `foundryup` to make sure you have the latest foundry version.
 
-1. install dependencies
-```shell
-npm install
-```
-2. run test
-```
-Npx hardhat test
-```
-This will show results for the gas metering on different modes based on 1) refund 2) token payment limit 3) price update
-
-*note* : first transaction is expensive because nonce increases 0 -> 1
-
-### foundry
-
-Foundry is used for unit tests
+Foundry is used for unit tests.
 
 1. install dependencies
 ```shell
@@ -65,9 +53,24 @@ forge test
 
 3. run coverage
 ```shell
-forge coverage
+forge coverage --ir-minimum 
 ```
 
+### Halmos
+
+To install Halmos, run `pip install halmos` or follow [their more detailed installation guide](https://github.com/a16z/halmos?tab=readme-ov-file#installation).
+
+Halmos is used for symbolic tests.
+
+1. install dependencies
+```shell
+forge install
+```
+
+2. run tests
+```shell
+halmos
+```
 
 ## License
-This project is licensed under the GNU General Public License v3.0.
+This project is licensed under the MIT license.
