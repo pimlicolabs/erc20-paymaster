@@ -5,31 +5,42 @@
 This repository contains an ERC-4337 paymaster implementation allowing users to pay for gas fees with ERC-20 tokens, leveraging an oracle to fetch latest prices. The contract takes the max fee during the paymaster validation step, and refunds excess tokens if the actual gas cost is lower than the initially provided amount. It also allows updating price configuration and withdrawing tokens by the contract owner.
 
 ## Features
-- ERC-20 token payments for transaction fees
-- Refunding excess tokens based on actual gas cost
-- Updating price configuration
-- Withdrawing tokens by contract owner
-- Fetching latest token prices using an Oracle
 
-## Contract
-The ERC20Paymaster contract inherits from BasePaymaster.
-
-### Functions
-- constructor: Initializes the PimlicoERC20Paymaster contract with the given parameters.
-- updateConfig: Updates the price markup and price update threshold configurations.
-- withdrawToken: Allows the contract owner to withdraw a specified amount of tokens from the contract.
-- updatePrice: Updates the token price by fetching the latest price from the Oracle.
-- _validatePaymasterUserOp: Validates a paymaster user operation and calculates the required token amount for the transaction.
-- _postOp: Performs post-operation tasks, such as updating the token price and refunding excess tokens.
-### Events
-- ConfigUpdated: Emitted when the price markup and price update threshold configurations are updated.
+- Users paying with ERC-20 tokens for transaction fees
+- Using guarantors to front gas fees to allow for token approvals during execution
+- Refunding excess tokens based on actual user operation cost
+- Using oracles to fetch latest gas prices
+- Withdrawing accrued tokens by contract owner
 
 ## Usage
-Deploy the PimlicoERC20Paymaster contract, providing the required parameters such as the ERC20 token, EntryPoint contract, and Oracle contract addresses.
-Update the price markup and price update threshold configurations if needed, using the updateConfig function.
-If necessary, the contract owner can withdraw tokens using the withdrawToken function.
-To update the token price, call the updatePrice function.
-For more information, please refer to the comments within the contract source code.
+
+This paymaster has four modes. It allows the user to be simply made to pay themselves, but also allows the selection of a guarnator who can front the ERC-20 token fees during validation, allowing the user to approve tokens to the paymaster or fetch / claim tokens if they do not already have any. For each mode, it is possible to set a ERC-20 token spend limit to protect against sudden price fluctuations or oracle manipulation.  
+
+Mode 1:
+- The user (sender) pays for gas fees with the ERC-20 token.
+- `paymasterData` is empty
+
+Mode 2:
+- The user (sender) pays for gas fees with the ERC-20 token, 
+- There is a limit to the amount of ERC-20 tokens that can be taken from the user for the user opertion.
+- `paymasterData`: "0x01" + token spend limit (32 bytes)
+
+Mode 3:
+- A guarantor fronts the ERC-20 token gas fees during validation, and expects the user to be able to pay the actual cost during the postOp phase and get refunded. Otherwise the guarantor is liable.
+- `paymasterData`: "0x02" + guarantor address (20 bytes) + validUntil (6 bytes) + validAfter (6 bytes) + guarantor signature (dynamic bytes)
+
+Mode 4:
+- A guarantor fronts the ERC-20 token gas fees during validation, and expects the user to be able to pay the actual cost during the postOp phase and get refunded. Otherwise the guarantor is liable.
+- There is a limit to the amount of ERC-20 tokens that can be taken from the user/guarantor for the user opertion.
+- `paymasterData`: "0x03" + token spend limit (32 bytes) + guarantor address (20 bytes) + validUntil (6 bytes) + validAfter (6 bytes) + guarantor signature (dynamic bytes)
+
+    /// user pays, with a limit
+    ///     hex"01" + token spend limit (32 bytes)
+    /// 2. user pays with a guarantor, no limit
+    ///     hex"02" + guarantor address (20 bytes) + validUntil (6 bytes) + validAfter (6 bytes) + guarantor signature (dynamic bytes)
+    /// 3. user pays with a guarantor, with a limit
+    ///     hex"03" + token spend limit (32 bytes) + guarantor address (20 bytes) + validUntil (6 bytes) + validAfter (6 bytes) + guarantor signature (dynamic bytes)
+
 
 ## Development
 
@@ -58,7 +69,7 @@ forge coverage --ir-minimum
 
 ### Halmos
 
-To install Halmos, run `pip install halmos` or follow [their more detailed installation guide](https://github.com/a16z/halmos?tab=readme-ov-file#installation).
+To install Halmos, run `pip install halmos` or follow [their detailed installation guide](https://github.com/a16z/halmos?tab=readme-ov-file#installation).
 
 Halmos is used for symbolic tests.
 
