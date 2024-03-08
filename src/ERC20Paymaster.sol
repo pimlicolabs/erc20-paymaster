@@ -58,10 +58,10 @@ contract ERC20Paymaster is BasePaymaster {
     /*                           EVENTS                           */
     /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
-    /// @notice Emitted when the price markup is updated.
+    /// @dev Emitted when the price markup is updated.
     event MarkupUpdated(uint32 priceMarkup);
 
-    /// @notice Emitted when a user operation is sponsored by the paymaster.
+    /// @dev Emitted when a user operation is sponsored by the paymaster.
     event UserOperationSponsored(
         bytes32 indexed userOpHash,
         address indexed user,
@@ -107,11 +107,11 @@ contract ERC20Paymaster is BasePaymaster {
     /*                        CONSTRUCTOR                         */
     /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
-    /// @notice Initializes the PimlicoERC20Paymaster contract with the given parameters.
+    /// @notice Initializes the ERC20Paymaster contract with the given parameters.
     /// @param _token The ERC20 token used for transaction fee payments.
-    /// @param _entryPoint The EntryPoint contract used in the Account Abstraction infrastructure.
-    /// @param _tokenOracle The Oracle contract used to fetch the latest token prices.
-    /// @param _nativeAssetOracle The Oracle contract used to fetch the latest native asset (ETH, Matic, Avax, etc.) prices.
+    /// @param _entryPoint The ERC-4337 EntryPoint contract.
+    /// @param _tokenOracle The oracle contract used to fetch the latest token prices.
+    /// @param _nativeAssetOracle The oracle contract used to fetch the latest native asset (ETH, Matic, Avax, etc.) prices.
     /// @param _owner The address that will be set as the owner of the contract.
     /// @param _priceMarkupLimit The maximum price markup percentage allowed (1e6 = 100%).
     /// @param _priceMarkup The initial price markup percentage applied to the token price (1e6 = 100%).
@@ -156,7 +156,7 @@ contract ERC20Paymaster is BasePaymaster {
     ///     hex"02" + guarantor address (20 bytes) + validUntil (6 bytes) + validAfter (6 bytes) + guarantor signature (dynamic bytes)
     /// 3. user pays with a guarantor, with a limit
     ///     hex"03" + token spend limit (32 bytes) + guarantor address (20 bytes) + validUntil (6 bytes) + validAfter (6 bytes) + guarantor signature (dynamic bytes)
-    /// NOTE: modes 2 and 3 are not compatible with the default storage access rules of ERC-4337 and require a whitelist for the guarantors.
+    /// Note: modes 2 and 3 are not compatible with the default storage access rules of ERC-4337 and require a whitelist for the guarantors.
     /// @param userOp The user operation.
     /// @param userOpHash The hash of the user operation.
     /// @param maxCost The amount of tokens required for pre-funding.
@@ -244,8 +244,7 @@ contract ERC20Paymaster is BasePaymaster {
         }
     }
 
-    /// @notice Performs post-operation tasks, such as updating the token price and refunding excess tokens.
-    /// Emits a {UserOperationSponsored} event.
+    /// @notice Performs post-operation tasks, such as refunding excess tokens and attempting to pay back the guarantor if there is one.
     /// @dev This function is called after a user operation has been executed or reverted.
     /// @param context The context containing the token amount and user sender address.
     /// @param actualGasCost The actual gas cost of the transaction.
