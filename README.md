@@ -1,63 +1,49 @@
-# Pimlico ERC20 Paymaster
+# `ERC20Paymaster` contract
+
 ## Overview
-PimlicoERC20Paymaster is an ERC-4337 Paymaster contract by Pimlico which is able to sponsor gas fees in exchange for ERC20 tokens. The contract refunds excess tokens if the actual gas cost is lower than the initially provided amount. It also allows updating price configuration and withdrawing tokens by the contract owner. The contract uses an Oracle to fetch the latest token prices.
+
+This repository contains an ERC-4337 paymaster implementation allowing users to pay for gas fees with ERC-20 tokens, leveraging an oracle to fetch latest prices. The contract takes the max fee during the paymaster validation step, and refunds excess tokens if the actual gas cost is lower than the initially provided amount. It also allows updating price configuration and withdrawing tokens by the contract owner.
 
 ## Features
-- ERC20 token payments for transaction fees
-- Refunding excess tokens based on actual gas cost
-- Updating price configuration
-- Withdrawing tokens by contract owner
-- Fetching latest token prices using an Oracle
 
-## Contract
-The PimlicoERC20Paymaster contract inherits from BasePaymaster.
-
-### Functions
-- constructor: Initializes the PimlicoERC20Paymaster contract with the given parameters.
-- updateConfig: Updates the price markup and price update threshold configurations.
-- withdrawToken: Allows the contract owner to withdraw a specified amount of tokens from the contract.
-- updatePrice: Updates the token price by fetching the latest price from the Oracle.
-- _validatePaymasterUserOp: Validates a paymaster user operation and calculates the required token amount for the transaction.
-- _postOp: Performs post-operation tasks, such as updating the token price and refunding excess tokens.
-
-### Events
-- ConfigUpdated: Emitted when the price markup and price update threshold configurations are updated.
+- Users paying with ERC-20 tokens for transaction fees
+- Using guarantors to front gas fees to allow for token approvals during execution
+- Compatible with EntryPoint v0.7
+- Refunding excess tokens based on the actual user operation cost
+- Using oracles to fetch latest gas prices
+- Withdrawing accrued tokens by the contract owner
 
 ## Usage
-Deploy the PimlicoERC20Paymaster contract, providing the required parameters such as the ERC20 token, EntryPoint contract, and Oracle contract addresses.
-Update the price markup and price update threshold configurations if needed, using the updateConfig function.
-If necessary, the contract owner can withdraw tokens using the withdrawToken function.
-To update the token price, call the updatePrice function.
-For more information, please refer to the comments within the contract source code.
 
-## SDK
-You can use permissionless.js to interact with an ERC20 Paymaster. Follow [this link](https://docs.pimlico.io/permissionless/tutorial/tutorial-3) to check out tutorial on how to submit user operation using with an ERC-20 Paymaster.
+This paymaster has four modes. It allows the user to be simply made to pay themselves, but also allows the selection of a guarnator who can front the ERC-20 token fees during validation, allowing the user to approve tokens to the paymaster or fetch / claim tokens if they do not already have any. For each mode, it is possible to set a ERC-20 token spend limit to protect against sudden price fluctuations or oracle manipulation.  
 
-Check out [these docs](https://docs.pimlico.io/permissionless/how-to/paymasters/use-custom-paymaster) if you're going to use a custom paymaster implementation.
+Mode 1:
+- The user (sender) pays for gas fees with the ERC-20 token.
+- `paymasterData` is empty
 
-## Development setup
+Mode 2:
+- The user (sender) pays for gas fees with the ERC-20 token, 
+- There is a limit to the amount of ERC-20 tokens that can be taken from the user for the user opertion.
+- `paymasterData`: "0x01" + token spend limit (32 bytes)
 
-This repository uses both hardhat and foundry for development, and assumes you have already installed hardhat/foundry
+Mode 3:
+- A guarantor fronts the ERC-20 token gas fees during validation, and expects the user to be able to pay the actual cost during the postOp phase and get refunded. Otherwise the guarantor is liable.
+- `paymasterData`: "0x02" + guarantor address (20 bytes) + validUntil (6 bytes) + validAfter (6 bytes) + guarantor signature (dynamic bytes)
 
-### hardhat
+Mode 4:
+- A guarantor fronts the ERC-20 token gas fees during validation, and expects the user to be able to pay the actual cost during the postOp phase and get refunded. Otherwise the guarantor is liable.
+- There is a limit to the amount of ERC-20 tokens that can be taken from the user/guarantor for the user opertion.
+- `paymasterData`: "0x03" + token spend limit (32 bytes) + guarantor address (20 bytes) + validUntil (6 bytes) + validAfter (6 bytes) + guarantor signature (dynamic bytes)
 
-Hardhat is used for gas metering and developing sdk.
+## Development
 
-1. install dependencies
-```shell
-npm install
-```
-2. run test
-```
-Npx hardhat test
-```
-This will show results for the gas metering on different modes based on 1) refund 2) token payment limit 3) price update
+This repository uses Foundry and Halmos for development.
 
-*note* : first transaction is expensive because nonce increases 0 -> 1
+### Foundry
 
-### foundry
+Run `foundryup` to make sure you have the latest foundry version.
 
-Foundry is used for unit tests
+Foundry is used for unit tests.
 
 1. install dependencies
 ```shell
@@ -71,9 +57,24 @@ forge test
 
 3. run coverage
 ```shell
-forge coverage
+forge coverage --ir-minimum 
 ```
 
+### Halmos
+
+To install Halmos, run `pip install halmos` or follow [their detailed installation guide](https://github.com/a16z/halmos?tab=readme-ov-file#installation).
+
+Halmos is used for symbolic tests.
+
+1. install dependencies
+```shell
+forge install
+```
+
+2. run tests
+```shell
+halmos
+```
 
 ## License
-This project is licensed under the GNU General Public License v3.0.
+This project is licensed under the MIT license.
