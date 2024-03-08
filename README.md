@@ -8,6 +8,7 @@ This repository contains an ERC-4337 paymaster implementation allowing users to 
 
 - Users paying with ERC-20 tokens for transaction fees
 - Using guarantors to front gas fees to allow for token approvals during execution
+- Compatible with EntryPoint v0.7
 - Refunding excess tokens based on actual user operation cost
 - Using oracles to fetch latest gas prices
 - Withdrawing accrued tokens by contract owner
