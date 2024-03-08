@@ -1,6 +1,6 @@
 pragma solidity ^0.8.0;
 
-import "../interfaces/IOracle.sol";
+import "../../src/interfaces/IOracle.sol";
 
 contract TestOracle is IOracle {
     int256 public price;

@@ -2,9 +2,11 @@
 pragma solidity ^0.8.0;
 
 import "src/ERC20Paymaster.sol";
-import "src/test/TestERC20.sol";
-import "src/test/TestOracle.sol";
-import "src/test/TestCounter.sol";
+import "./utils/TestERC20.sol";
+import "./utils/TestOracle.sol";
+import "./utils/TestCounter.sol";
+import "./utils/BytesLib.sol";
+
 import "@account-abstraction/contracts/core/EntryPoint.sol";
 import "@account-abstraction/contracts/core/EntryPointSimulations.sol";
 import "@account-abstraction/contracts/interfaces/PackedUserOperation.sol";
@@ -15,8 +17,6 @@ import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 
 using ECDSA for bytes32;
-
-import "./BytesLib.sol";
 
 contract ERC20Paymaster18Test is Test {
     EntryPoint entryPoint;

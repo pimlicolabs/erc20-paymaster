@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.23;
 
-// Import the required libraries and contracts
 import "@account-abstraction/contracts/core/BasePaymaster.sol";
 import "@account-abstraction/contracts/core/EntryPoint.sol";
 import "@account-abstraction/contracts/core/Helpers.sol";
@@ -16,12 +15,13 @@ import "./utils/SafeTransferLib.sol";
 using UserOperationLib for PackedUserOperation;
 
 /// @title ERC20Paymaster
-/// @author Pimlico
-/// @notice An ERC-4337 Paymaster contract by Pimlico which is able to sponsor gas fees in exchange for ERC20 tokens.
+/// @author Pimlico (https://github.com/pimlicolabs/erc20-paymaster/blob/main/src/ERC20Paymaster.sol)
+/// @author Using Solady (https://github.com/vectorized/solady)
+/// @notice An ERC-4337 Paymaster contract which is able to sponsor gas fees in exchange for ERC-20 tokens.
 /// The contract refunds excess tokens. It also allows updating price configuration and withdrawing tokens by the contract owner.
 /// The contract uses oracles to fetch the latest token prices.
 /// @dev Inherits from BasePaymaster.
-///
+/// @custom:security-contact security@pimlico.io
 contract ERC20Paymaster is BasePaymaster {
     /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
     /*                       CUSTOM ERRORS                        */
