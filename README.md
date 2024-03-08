@@ -34,14 +34,6 @@ Mode 4:
 - There is a limit to the amount of ERC-20 tokens that can be taken from the user/guarantor for the user opertion.
 - `paymasterData`: "0x03" + token spend limit (32 bytes) + guarantor address (20 bytes) + validUntil (6 bytes) + validAfter (6 bytes) + guarantor signature (dynamic bytes)
 
-    /// user pays, with a limit
-    ///     hex"01" + token spend limit (32 bytes)
-    /// 2. user pays with a guarantor, no limit
-    ///     hex"02" + guarantor address (20 bytes) + validUntil (6 bytes) + validAfter (6 bytes) + guarantor signature (dynamic bytes)
-    /// 3. user pays with a guarantor, with a limit
-    ///     hex"03" + token spend limit (32 bytes) + guarantor address (20 bytes) + validUntil (6 bytes) + validAfter (6 bytes) + guarantor signature (dynamic bytes)
-
-
 ## Development
 
 This repository uses Foundry and Halmos for development.
