@@ -20,6 +20,7 @@ using UserOperationLib for PackedUserOperation;
 /// @notice An ERC-4337 Paymaster contract which is able to sponsor gas fees in exchange for ERC-20 tokens.
 /// The contract refunds excess tokens. It also allows updating price configuration and withdrawing tokens by the contract owner.
 /// The contract uses oracles to fetch the latest token prices.
+/// The paymaster supports standard and up-rebasing ERC-20 tokens. It down not support down-rebasing and fee-on-transfer tokens.
 /// @dev Inherits from BasePaymaster.
 /// @custom:security-contact security@pimlico.io
 contract ERC20Paymaster is BasePaymaster {
