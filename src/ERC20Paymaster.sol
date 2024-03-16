@@ -79,7 +79,10 @@ contract ERC20Paymaster is BasePaymaster {
     uint256 public constant PRICE_DENOMINATOR = 1e6;
 
     /// @dev The estimated gas cost for refunding tokens after the transaction is completed.
-    uint256 public constant REFUND_POSTOP_COST = 30000;
+    uint256 public immutable refundPostOpCost;
+
+    /// @dev The estimated gas cost for refunding tokens after the transaction is completed with a guarantor.
+    uint256 public immutable refundPostOpCostWithGuarantor;
 
     /// @dev The ERC20 token used for transaction fee payments.
     IERC20 public immutable token;
@@ -115,6 +118,8 @@ contract ERC20Paymaster is BasePaymaster {
     /// @param _owner The address that will be set as the owner of the contract.
     /// @param _priceMarkupLimit The maximum price markup percentage allowed (1e6 = 100%).
     /// @param _priceMarkup The initial price markup percentage applied to the token price (1e6 = 100%).
+    /// @param _refundPostOpCost The estimated gas cost for refunding tokens after the transaction is completed.
+    /// @param _refundPostOpCostWithGuarantor The estimated gas cost for refunding tokens after the transaction is completed with a guarantor.
     constructor(
         IERC20Metadata _token,
         IEntryPoint _entryPoint,
@@ -122,13 +127,17 @@ contract ERC20Paymaster is BasePaymaster {
         IOracle _nativeAssetOracle,
         address _owner,
         uint32 _priceMarkupLimit,
-        uint32 _priceMarkup
+        uint32 _priceMarkup,
+        uint256 _refundPostOpCost,
+        uint256 _refundPostOpCostWithGuarantor
     ) BasePaymaster(_entryPoint) {
         token = _token;
         tokenOracle = _tokenOracle; // oracle for token -> usd
         nativeAssetOracle = _nativeAssetOracle; // oracle for native asset(eth/matic/avax..) -> usd
         priceMarkupLimit = _priceMarkupLimit;
         priceMarkup = _priceMarkup;
+        refundPostOpCost = _refundPostOpCost;
+        refundPostOpCostWithGuarantor = _refundPostOpCostWithGuarantor;
         transferOwnership(_owner);
         tokenDecimals = 10 ** _token.decimals();
         if (_priceMarkup < 1e6) {
@@ -178,8 +187,13 @@ contract ERC20Paymaster is BasePaymaster {
         uint256 tokenAmount;
         {
             uint256 maxFeePerGas = UserOperationLib.unpackMaxFeePerGas(userOp);
-            tokenAmount =
-                (maxCost + (REFUND_POSTOP_COST) * maxFeePerGas) * priceMarkup * tokenPrice / (1e18 * PRICE_DENOMINATOR);
+            if (mode == 0 || mode == 1) {
+                tokenAmount = (maxCost + (refundPostOpCost) * maxFeePerGas) * priceMarkup * tokenPrice
+                    / (1e18 * PRICE_DENOMINATOR);
+            } else {
+                tokenAmount = (maxCost + (refundPostOpCostWithGuarantor) * maxFeePerGas) * priceMarkup * tokenPrice
+                    / (1e18 * PRICE_DENOMINATOR);
+            }
         }
 
         if (mode == uint8(0)) {
@@ -251,10 +265,11 @@ contract ERC20Paymaster is BasePaymaster {
         uint192 tokenPrice = uint192(bytes24(context[32:56]));
         address sender = address(bytes20(context[56:76]));
         bytes32 userOpHash = bytes32(context[76:108]);
-        uint256 actualTokenNeeded = (actualGasCost + REFUND_POSTOP_COST * actualUserOpFeePerGas) * priceMarkup
-            * tokenPrice / (1e18 * PRICE_DENOMINATOR);
 
         if (context.length == 128) {
+            // A guarantor is used
+            uint256 actualTokenNeeded = (actualGasCost + refundPostOpCostWithGuarantor * actualUserOpFeePerGas)
+                * priceMarkup * tokenPrice / (1e18 * PRICE_DENOMINATOR);
             address guarantor = address(bytes20(context[108:128]));
 
             bool success = SafeTransferLib.trySafeTransferFrom(address(token), sender, address(this), actualTokenNeeded);
@@ -268,6 +283,9 @@ contract ERC20Paymaster is BasePaymaster {
                 emit UserOperationSponsored(userOpHash, sender, guarantor, actualTokenNeeded, tokenPrice, true);
             }
         } else {
+            uint256 actualTokenNeeded = (actualGasCost + refundPostOpCost * actualUserOpFeePerGas) * priceMarkup
+                * tokenPrice / (1e18 * PRICE_DENOMINATOR);
+
             SafeTransferLib.safeTransfer(address(token), sender, prefundTokenAmount - actualTokenNeeded);
             emit UserOperationSponsored(userOpHash, sender, address(0), actualTokenNeeded, tokenPrice, false);
         }
