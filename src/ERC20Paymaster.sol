@@ -169,8 +169,8 @@ contract ERC20Paymaster is BasePaymaster {
     {
         (uint8 mode, bytes calldata paymasterConfig) = _parsePaymasterAndData(userOp.paymasterAndData);
 
-        // 0xfc is the mask for the last 2 bits 00 which means mode should be 00(0) || 01(1) || 10(2) || 11(3)
-        if (mode & 0xfc != 0) {
+        // valid modes are 0, 1, 2, 3
+        if (mode >= 4) {
             revert PaymasterDataModeInvalid();
         }
 
