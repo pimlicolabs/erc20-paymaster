@@ -159,7 +159,7 @@ contract ERC20Paymaster is BasePaymaster {
     /// Note: modes 2 and 3 are not compatible with the default storage access rules of ERC-4337 and require a whitelist for the guarantors.
     /// @param userOp The user operation.
     /// @param userOpHash The hash of the user operation.
-    /// @param maxCost The amount of tokens required for pre-funding.
+    /// @param maxCost The maximum cost in native tokens of this user operation.
     /// @return context The context containing the token amount and user sender address (if applicable).
     /// @return validationResult A uint256 value indicating the result of the validation (always 0 in this implementation).
     function _validatePaymasterUserOp(PackedUserOperation calldata userOp, bytes32 userOpHash, uint256 maxCost)
