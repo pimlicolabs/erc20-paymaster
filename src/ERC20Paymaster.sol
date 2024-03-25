@@ -182,11 +182,11 @@ contract ERC20Paymaster is BasePaymaster {
                 (maxCost + (REFUND_POSTOP_COST) * maxFeePerGas) * priceMarkup * tokenPrice / (1e18 * PRICE_DENOMINATOR);
         }
 
-        if (mode == uint8(0)) {
+        if (mode == 0) {
             SafeTransferLib.safeTransferFrom(address(token), userOp.sender, address(this), tokenAmount);
             context = abi.encodePacked(tokenAmount, tokenPrice, userOp.sender, userOpHash);
             validationResult = 0;
-        } else if (mode == uint8(1)) {
+        } else if (mode == 1) {
             if (uint256(bytes32(paymasterConfig[0:32])) == 0) {
                 revert TokenLimitZero();
             }
@@ -196,7 +196,7 @@ contract ERC20Paymaster is BasePaymaster {
             SafeTransferLib.safeTransferFrom(address(token), userOp.sender, address(this), tokenAmount);
             context = abi.encodePacked(tokenAmount, tokenPrice, userOp.sender, userOpHash);
             validationResult = 0;
-        } else if (mode == uint8(2)) {
+        } else if (mode == 2) {
             address guarantor = address(bytes20(paymasterConfig[0:20]));
 
             bool signatureValid = SignatureChecker.isValidSignatureNow(
