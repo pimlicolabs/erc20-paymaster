@@ -49,8 +49,9 @@ contract ERC20Paymaster18Test is Test {
         nativeAssetOracle = new TestOracle();
         nativeAssetOracle.setPrice(2000_00000000);
         accountFactory = new SimpleAccountFactory(entryPoint);
-        paymaster =
-            new ERC20Paymaster(token, entryPoint, tokenOracle, nativeAssetOracle, paymasterOperator, 120e4, 100e4);
+        paymaster = new ERC20Paymaster(
+            token, entryPoint, tokenOracle, nativeAssetOracle, 2 * 24 * 60 * 60, paymasterOperator, 120e4, 100e4
+        );
         account = accountFactory.createAccount(user, 0);
         counter = new TestCounter();
         vm.deal(paymasterOperator, 1000e18);
@@ -62,8 +63,9 @@ contract ERC20Paymaster18Test is Test {
     }
 
     function testDeploy() external {
-        ERC20Paymaster testArtifact =
-            new ERC20Paymaster(token, entryPoint, tokenOracle, nativeAssetOracle, paymasterOperator, 120e4, 100e4);
+        ERC20Paymaster testArtifact = new ERC20Paymaster(
+            token, entryPoint, tokenOracle, nativeAssetOracle, 2 * 24 * 60 * 60, paymasterOperator, 120e4, 100e4
+        );
         assertEq(address(testArtifact.token()), address(token));
         assertEq(address(testArtifact.entryPoint()), address(entryPoint));
         assertEq(address(testArtifact.tokenOracle()), address(tokenOracle));
@@ -130,20 +132,13 @@ contract ERC20Paymaster18Test is Test {
 
     function testGetPriceFailZeroPrice() external {
         nativeAssetOracle.setPrice(0);
-        vm.expectRevert(ERC20Paymaster.OraclePriceZero.selector);
+        vm.expectRevert(ERC20Paymaster.OraclePriceNotPositive.selector);
         paymaster.getPrice();
     }
 
     function testGetPriceFailStalePrice() external {
-        (,,,, uint80 answeredInRound) = nativeAssetOracle.latestRoundData();
-        nativeAssetOracle.setRoundId(answeredInRound + 1);
-        vm.expectRevert(ERC20Paymaster.OraclePriceStale.selector);
-        paymaster.getPrice();
-    }
-
-    function testGetPriceFailIncompleteRound() external {
         nativeAssetOracle.setUpdatedAtDelay(3 * 24 * 60 * 60);
-        vm.expectRevert(ERC20Paymaster.OracleRoundIncomplete.selector);
+        vm.expectRevert(ERC20Paymaster.OraclePriceStale.selector);
         paymaster.getPrice();
     }
 

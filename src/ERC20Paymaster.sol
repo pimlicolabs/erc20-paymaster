@@ -49,7 +49,7 @@ contract ERC20Paymaster is BasePaymaster {
     error OraclePriceStale();
 
     /// @dev The oracle price is less than or equal to zero.
-    error OraclePriceZero();
+    error OraclePriceNotPositive();
 
     /// @dev The oracle decimals are not set to 8.
     error OracleDecimalsInvalid();
@@ -93,6 +93,9 @@ contract ERC20Paymaster is BasePaymaster {
     /// @dev The Oracle contract used to fetch the latest native asset (e.g. ETH) to USD prices.
     IOracle public immutable nativeAssetOracle;
 
+    // @dev The amount of time in seconds after which an oracle result should be considered stale.
+    uint32 public immutable stalenessThreshold;
+
     /// @dev The maximum price markup percentage allowed (1e6 = 100%).
     uint32 public immutable priceMarkupLimit;
 
@@ -120,6 +123,7 @@ contract ERC20Paymaster is BasePaymaster {
         IEntryPoint _entryPoint,
         IOracle _tokenOracle,
         IOracle _nativeAssetOracle,
+        uint32 _stalenessThreshold,
         address _owner,
         uint32 _priceMarkupLimit,
         uint32 _priceMarkup
@@ -127,6 +131,7 @@ contract ERC20Paymaster is BasePaymaster {
         token = _token;
         tokenOracle = _tokenOracle; // oracle for token -> usd
         nativeAssetOracle = _nativeAssetOracle; // oracle for native asset(eth/matic/avax..) -> usd
+        stalenessThreshold = _stalenessThreshold;
         priceMarkupLimit = _priceMarkupLimit;
         priceMarkup = _priceMarkup;
         transferOwnership(_owner);
@@ -361,15 +366,11 @@ contract ERC20Paymaster is BasePaymaster {
     /// @param _oracle The oracle contract to fetch the price from.
     /// @return price The latest price fetched from the oracle.
     function _fetchPrice(IOracle _oracle) internal view returns (uint192 price) {
-        (uint80 roundId, int256 answer,, uint256 updatedAt, uint80 answeredInRound) = _oracle.latestRoundData();
+        (, int256 answer,, uint256 updatedAt,) = _oracle.latestRoundData();
         if (answer <= 0) {
-            revert OraclePriceZero();
+            revert OraclePriceNotPositive();
         }
-        // 2 days old price is considered stale since the price is updated every 24 hours
-        if (updatedAt < block.timestamp - 60 * 60 * 24 * 2) {
-            revert OracleRoundIncomplete();
-        }
-        if (answeredInRound < roundId) {
+        if (updatedAt < block.timestamp - stalenessThreshold) {
             revert OraclePriceStale();
         }
         price = uint192(int192(answer));
