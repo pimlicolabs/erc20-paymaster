@@ -38,16 +38,10 @@ contract ERC20PaymasterSymbolicTest is SymTest, Test {
     SimpleAccount account;
 
     function setUp() external {
-        beneficiary = payable(address(0x976EA74026E726554dB657fA54763abd0C3a0aa9));
-        paymasterOperator = address(0x14dC79964da2C08b23698B3D3cc7Ca32193d9955);
-        (user, userKey) = (
-            address(0x23618e81E3f5cdF7f54C3d65f7FBc0aBf5B21E8f),
-            uint256(bytes32(0xdbda1821b80551c9d65939329250298aa3472ba22feea921c0cf5d620ea67b97))
-        );
-        (guarantor, guarantorKey) = (
-            address(0xa0Ee7A142d267C1f36714E4a8F75612F20a79720),
-            uint256(bytes32(0x2a871d0798f97d79848a013d4936a73bf4cc922c825d33c1cf7073dff6d409c6))
-        );
+        beneficiary = payable(makeAddr("beneficiary"));
+        paymasterOperator = makeAddr("paymasterOperator");
+        (user, userKey) = makeAddrAndKey("user");
+        (guarantor, guarantorKey) = makeAddrAndKey("guarantor");
 
         entryPoint = new EntryPoint();
         entryPointSimulations = new EntryPointSimulations();
@@ -103,5 +97,63 @@ contract ERC20PaymasterSymbolicTest is SymTest, Test {
         } else {
             assert(priceMarkup <= priceMarkupLimit);
         }
+    }
+
+    function check_testERC20PaymasterMode1Success() external {
+        vm.deal(address(account), 1e18);
+        token.sudoMint(address(account), 1000e18); // 1000 usdc;
+        token.sudoMint(address(paymaster), 1000e6); // 1000 usdc;
+        token.sudoApprove(address(account), address(paymaster), 1000e18);
+        PackedUserOperation memory op =
+            fillUserOp(account, userKey, address(counter), 0, abi.encodeWithSelector(TestCounter.count.selector));
+
+        op.paymasterAndData = abi.encodePacked(address(paymaster), uint128(100000), uint128(50000));
+        uint256 maxFeePerGas = uint256(uint128(uint256(op.gasFees)));
+        uint256 limit = (getRequiredPrefund(op) + (paymaster.refundPostOpCost() * maxFeePerGas))
+            * paymaster.priceMarkup() * paymaster.getPrice() / (1e18 * paymaster.PRICE_DENOMINATOR());
+
+        op.paymasterAndData = abi.encodePacked(address(paymaster), uint128(100000), uint128(50000), hex"01", limit);
+        op.signature = signUserOp(op, userKey);
+        submitUserOp(op);
+    }
+
+    function getRequiredPrefund(PackedUserOperation memory op) internal pure returns (uint256 requiredPrefund) {
+        uint256 verificationGasLimit = uint256(uint128(bytes16(op.accountGasLimits)));
+        uint256 callGasLimit = uint256(uint128(uint256(op.accountGasLimits)));
+        uint256 paymasterVerificationGasLimit = uint256(uint128(bytes16(BytesLib.slice(op.paymasterAndData, 20, 16))));
+        uint256 postOpGasLimit = uint256(uint128(bytes16(BytesLib.slice(op.paymasterAndData, 36, 16))));
+        uint256 preVerificationGas = op.preVerificationGas;
+        uint256 maxFeePerGas = uint256(uint128(uint256(op.gasFees)));
+
+        uint256 requiredGas =
+            verificationGasLimit + callGasLimit + paymasterVerificationGasLimit + postOpGasLimit + preVerificationGas;
+        requiredPrefund = requiredGas * maxFeePerGas;
+    }
+
+    function fillUserOp(SimpleAccount _sender, uint256 _key, address _to, uint256 _value, bytes memory _data)
+        public
+        view
+        returns (PackedUserOperation memory op)
+    {
+        op.sender = address(_sender);
+        op.nonce = entryPoint.getNonce(address(_sender), 0);
+        op.callData = abi.encodeWithSelector(SimpleAccount.execute.selector, _to, _value, _data);
+        op.accountGasLimits = bytes32(abi.encodePacked(bytes16(uint128(80000)), bytes16(uint128(50000))));
+        op.preVerificationGas = 50000;
+        op.gasFees = bytes32(abi.encodePacked(bytes16(uint128(100)), bytes16(uint128(1000000000))));
+        op.signature = signUserOp(op, _key);
+        return op;
+    }
+
+    function signUserOp(PackedUserOperation memory op, uint256 _key) public view returns (bytes memory signature) {
+        bytes32 hash = entryPoint.getUserOpHash(op);
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(_key, MessageHashUtils.toEthSignedMessageHash(hash));
+        signature = abi.encodePacked(r, s, v);
+    }
+
+    function submitUserOp(PackedUserOperation memory op) public {
+        PackedUserOperation[] memory ops = new PackedUserOperation[](1);
+        ops[0] = op;
+        entryPoint.handleOps(ops, beneficiary);
     }
 }
