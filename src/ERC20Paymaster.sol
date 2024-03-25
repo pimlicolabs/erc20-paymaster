@@ -30,6 +30,9 @@ contract ERC20Paymaster is BasePaymaster {
     /// @dev The paymaster data mode is invalid. The mode should be 0, 1, 2, or 3.
     error PaymasterDataModeInvalid();
 
+    /// @dev The paymaster data length is invalid for the selected mode.
+    error PaymasterDataLengthInvalid();
+
     /// @dev The token amount is higher than the limit set.
     error TokenAmountTooHigh();
 
@@ -187,6 +190,9 @@ contract ERC20Paymaster is BasePaymaster {
             context = abi.encodePacked(tokenAmount, tokenPrice, userOp.sender, userOpHash);
             validationResult = 0;
         } else if (mode == uint8(1)) {
+            if (paymasterConfig.length != 32) {
+                revert PaymasterDataLengthInvalid();
+            }
             if (uint256(bytes32(paymasterConfig[0:32])) == 0) {
                 revert TokenLimitZero();
             }
@@ -197,6 +203,10 @@ contract ERC20Paymaster is BasePaymaster {
             context = abi.encodePacked(tokenAmount, tokenPrice, userOp.sender, userOpHash);
             validationResult = 0;
         } else if (mode == uint8(2)) {
+            if (paymasterConfig.length < 32) {
+                revert PaymasterDataLengthInvalid();
+            }
+
             address guarantor = address(bytes20(paymasterConfig[0:20]));
 
             bool signatureValid = SignatureChecker.isValidSignatureNow(
@@ -211,6 +221,10 @@ contract ERC20Paymaster is BasePaymaster {
                 !signatureValid, uint48(bytes6(paymasterConfig[20:26])), uint48(bytes6(paymasterConfig[26:32]))
             );
         } else {
+            if (paymasterConfig.length < 64) {
+                revert PaymasterDataLengthInvalid();
+            }
+
             address guarantor = address(bytes20(paymasterConfig[32:52]));
 
             if (uint256(bytes32(paymasterConfig[0:32])) == 0) {
