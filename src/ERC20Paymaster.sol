@@ -42,9 +42,6 @@ contract ERC20Paymaster is BasePaymaster {
     /// @dev The price markup selected is lower than break-even.
     error PriceMarkupTooLow();
 
-    /// @dev The oracle price is incomplete.
-    error OracleRoundIncomplete();
-
     /// @dev The oracle price is stale.
     error OraclePriceStale();
 
