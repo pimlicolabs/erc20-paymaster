@@ -201,11 +201,11 @@ contract ERC20Paymaster is BasePaymaster {
             }
         }
 
-        if (mode == uint8(0)) {
+        if (mode == 0) {
             SafeTransferLib.safeTransferFrom(address(token), userOp.sender, address(this), tokenAmount);
             context = abi.encodePacked(tokenAmount, tokenPrice, userOp.sender, userOpHash);
             validationResult = 0;
-        } else if (mode == uint8(1)) {
+        } else if (mode == 1) {
             if (paymasterConfig.length != 32) {
                 revert PaymasterDataLengthInvalid();
             }
@@ -218,7 +218,7 @@ contract ERC20Paymaster is BasePaymaster {
             SafeTransferLib.safeTransferFrom(address(token), userOp.sender, address(this), tokenAmount);
             context = abi.encodePacked(tokenAmount, tokenPrice, userOp.sender, userOpHash);
             validationResult = 0;
-        } else if (mode == uint8(2)) {
+        } else if (mode == 2) {
             if (paymasterConfig.length < 32) {
                 revert PaymasterDataLengthInvalid();
             }
