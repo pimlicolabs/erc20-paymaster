@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
 import "src/ERC20Paymaster.sol";
@@ -49,8 +49,9 @@ contract ERC20Paymaster18Test is Test {
         nativeAssetOracle = new TestOracle();
         nativeAssetOracle.setPrice(2000_00000000);
         accountFactory = new SimpleAccountFactory(entryPoint);
-        paymaster =
-            new ERC20Paymaster(token, entryPoint, tokenOracle, nativeAssetOracle, paymasterOperator, 120e4, 100e4);
+        paymaster = new ERC20Paymaster(
+            token, entryPoint, tokenOracle, nativeAssetOracle, 2 * 24 * 60 * 60, paymasterOperator, 120e4, 100e4, 30000, 50000
+        );
         account = accountFactory.createAccount(user, 0);
         counter = new TestCounter();
         vm.deal(paymasterOperator, 1000e18);
@@ -62,8 +63,9 @@ contract ERC20Paymaster18Test is Test {
     }
 
     function testDeploy() external {
-        ERC20Paymaster testArtifact =
-            new ERC20Paymaster(token, entryPoint, tokenOracle, nativeAssetOracle, paymasterOperator, 120e4, 100e4);
+        ERC20Paymaster testArtifact = new ERC20Paymaster(
+            token, entryPoint, tokenOracle, nativeAssetOracle, 2 * 24 * 60 * 60, paymasterOperator, 120e4, 100e4, 30000, 50000
+        );
         assertEq(address(testArtifact.token()), address(token));
         assertEq(address(testArtifact.entryPoint()), address(entryPoint));
         assertEq(address(testArtifact.tokenOracle()), address(tokenOracle));
@@ -130,20 +132,13 @@ contract ERC20Paymaster18Test is Test {
 
     function testGetPriceFailZeroPrice() external {
         nativeAssetOracle.setPrice(0);
-        vm.expectRevert(ERC20Paymaster.OraclePriceZero.selector);
+        vm.expectRevert(ERC20Paymaster.OraclePriceNotPositive.selector);
         paymaster.getPrice();
     }
 
     function testGetPriceFailStalePrice() external {
-        (,,,, uint80 answeredInRound) = nativeAssetOracle.latestRoundData();
-        nativeAssetOracle.setRoundId(answeredInRound + 1);
-        vm.expectRevert(ERC20Paymaster.OraclePriceStale.selector);
-        paymaster.getPrice();
-    }
-
-    function testGetPriceFailIncompleteRound() external {
         nativeAssetOracle.setUpdatedAtDelay(3 * 24 * 60 * 60);
-        vm.expectRevert(ERC20Paymaster.OracleRoundIncomplete.selector);
+        vm.expectRevert(ERC20Paymaster.OraclePriceStale.selector);
         paymaster.getPrice();
     }
 
@@ -193,11 +188,38 @@ contract ERC20Paymaster18Test is Test {
 
         op.paymasterAndData = abi.encodePacked(address(paymaster), uint128(100000), uint128(50000));
         uint256 maxFeePerGas = uint256(uint128(uint256(op.gasFees)));
-        uint256 limit = (getRequiredPrefund(op) + (paymaster.REFUND_POSTOP_COST() * maxFeePerGas))
+        uint256 limit = (getRequiredPrefund(op) + (paymaster.refundPostOpCost() * maxFeePerGas))
             * paymaster.priceMarkup() * paymaster.getPrice() / (1e18 * paymaster.PRICE_DENOMINATOR());
 
         op.paymasterAndData = abi.encodePacked(address(paymaster), uint128(100000), uint128(50000), hex"01", limit);
         op.signature = signUserOp(op, userKey);
+        submitUserOp(op);
+    }
+
+    function testERC20PaymasterMode1FailedPaymasterDataLengthInvalid() external {
+        vm.deal(address(account), 1e18);
+        token.sudoMint(address(account), 1000e18); // 1000 usdc;
+        token.sudoMint(address(paymaster), 1000e6); // 1000 usdc;
+        token.sudoApprove(address(account), address(paymaster), 1000e18);
+        PackedUserOperation memory op =
+            fillUserOp(account, userKey, address(counter), 0, abi.encodeWithSelector(TestCounter.count.selector));
+
+        op.paymasterAndData = abi.encodePacked(address(paymaster), uint128(100000), uint128(50000));
+        uint256 maxFeePerGas = uint256(uint128(uint256(op.gasFees)));
+        uint256 limit = (getRequiredPrefund(op) + (paymaster.REFUND_POSTOP_COST() * maxFeePerGas))
+            * paymaster.priceMarkup() * paymaster.getPrice() / (1e18 * paymaster.PRICE_DENOMINATOR());
+
+        op.paymasterAndData =
+            abi.encodePacked(address(paymaster), uint128(100000), uint128(50000), hex"01", limit, hex"69");
+        op.signature = signUserOp(op, userKey);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IEntryPoint.FailedOpWithRevert.selector,
+                uint256(0),
+                "AA33 reverted",
+                abi.encodeWithSelector(ERC20Paymaster.PaymasterDataLengthInvalid.selector)
+            )
+        );
         submitUserOp(op);
     }
 
@@ -211,7 +233,7 @@ contract ERC20Paymaster18Test is Test {
 
         op.paymasterAndData = abi.encodePacked(address(paymaster), uint128(100000), uint128(50000));
         uint256 maxFeePerGas = uint256(uint128(uint256(op.gasFees)));
-        uint256 limit = (getRequiredPrefund(op) + (paymaster.REFUND_POSTOP_COST() * maxFeePerGas))
+        uint256 limit = (getRequiredPrefund(op) + (paymaster.refundPostOpCost() * maxFeePerGas))
             * paymaster.priceMarkup() * paymaster.getPrice() / (1e18 * paymaster.PRICE_DENOMINATOR()) - 1;
 
         op.paymasterAndData = abi.encodePacked(address(paymaster), uint128(100000), uint128(50000), hex"01", limit);
@@ -319,6 +341,29 @@ contract ERC20Paymaster18Test is Test {
         submitUserOp(op);
     }
 
+    function testERC20PaymasterMode2FailedInvalidPaymasterDataLength() external {
+        vm.deal(address(account), 1e18);
+        token.sudoMint(address(account), 1000e18); // 1000 usdc;
+        token.sudoMint(address(paymaster), 1000e6); // 1000 usdc;
+        token.sudoMint(address(guarantor), 1000e18); // 1000 usdc;
+        token.sudoApprove(address(guarantor), address(paymaster), 1000e18);
+        PackedUserOperation memory op = fillUserOp(
+            account, userKey, address(token), 0, abi.encodeWithSelector(ERC20.approve.selector, paymaster, 1000e18)
+        );
+
+        op.paymasterAndData = abi.encodePacked(address(paymaster), uint128(100000), uint128(50000), hex"02", hex"69");
+        op.signature = signUserOp(op, userKey);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IEntryPoint.FailedOpWithRevert.selector,
+                uint256(0),
+                "AA33 reverted",
+                abi.encodeWithSelector(ERC20Paymaster.PaymasterDataLengthInvalid.selector)
+            )
+        );
+        submitUserOp(op);
+    }
+
     function testERC20PaymasterMode2SuccessGuarantorPays() external {
         vm.deal(address(account), 1e18);
         token.sudoMint(address(account), 1000e18); // 1000 usdc;
@@ -365,7 +410,7 @@ contract ERC20Paymaster18Test is Test {
 
         op.paymasterAndData = abi.encodePacked(address(paymaster), uint128(100000), uint128(50000));
         uint256 maxFeePerGas = uint256(uint128(uint256(op.gasFees)));
-        uint256 limit = (getRequiredPrefund(op) + (paymaster.REFUND_POSTOP_COST() * maxFeePerGas))
+        uint256 limit = (getRequiredPrefund(op) + (paymaster.refundPostOpCostWithGuarantor() * maxFeePerGas))
             * paymaster.priceMarkup() * paymaster.getPrice() / (1e18 * paymaster.PRICE_DENOMINATOR());
 
         uint48 validUntil = 0;
@@ -389,6 +434,29 @@ contract ERC20Paymaster18Test is Test {
         submitUserOp(op);
     }
 
+    function testERC20PaymasterMode3FailedPaymasterDataLengthInvalid() external {
+        vm.deal(address(account), 1e18);
+        token.sudoMint(address(account), 1000e18); // 1000 usdc;
+        token.sudoMint(address(paymaster), 1000e6); // 1000 usdc;
+        token.sudoMint(address(guarantor), 1000e18); // 1000 usdc;
+        token.sudoApprove(address(guarantor), address(paymaster), 1000e18);
+        PackedUserOperation memory op = fillUserOp(
+            account, userKey, address(token), 0, abi.encodeWithSelector(ERC20.approve.selector, paymaster, 1000e18)
+        );
+
+        op.paymasterAndData = abi.encodePacked(address(paymaster), uint128(100000), uint128(50000), hex"03", hex"69");
+        op.signature = signUserOp(op, userKey);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IEntryPoint.FailedOpWithRevert.selector,
+                uint256(0),
+                "AA33 reverted",
+                abi.encodeWithSelector(ERC20Paymaster.PaymasterDataLengthInvalid.selector)
+            )
+        );
+        submitUserOp(op);
+    }
+
     function testERC20PaymasterMode3FailedTokenLimitExceeded() external {
         vm.deal(address(account), 1e18);
         token.sudoMint(address(account), 1000e18); // 1000 usdc;
@@ -401,7 +469,7 @@ contract ERC20Paymaster18Test is Test {
 
         op.paymasterAndData = abi.encodePacked(address(paymaster), uint128(100000), uint128(50000));
         uint256 maxFeePerGas = uint256(uint128(uint256(op.gasFees)));
-        uint256 limit = (getRequiredPrefund(op) + (paymaster.REFUND_POSTOP_COST() * maxFeePerGas))
+        uint256 limit = (getRequiredPrefund(op) + (paymaster.refundPostOpCost() * maxFeePerGas))
             * paymaster.priceMarkup() * paymaster.getPrice() / (1e18 * paymaster.PRICE_DENOMINATOR()) - 1;
 
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(guarantorKey, paymaster.getHash(op, 0, 0, limit));
@@ -465,7 +533,7 @@ contract ERC20Paymaster18Test is Test {
 
         op.paymasterAndData = abi.encodePacked(address(paymaster), uint128(100000), uint128(50000));
         uint256 maxFeePerGas = uint256(uint128(uint256(op.gasFees)));
-        uint256 limit = (getRequiredPrefund(op) + (paymaster.REFUND_POSTOP_COST() * maxFeePerGas))
+        uint256 limit = (getRequiredPrefund(op) + (paymaster.refundPostOpCostWithGuarantor() * maxFeePerGas))
             * paymaster.priceMarkup() * paymaster.getPrice() / (1e18 * paymaster.PRICE_DENOMINATOR());
 
         uint48 validUntil = uint48(0);

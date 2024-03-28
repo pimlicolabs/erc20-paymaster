@@ -1,16 +1,15 @@
-// SPDX-License-Identifier: GPL-3.0
-pragma solidity ^0.8.23;
+// SPDX-License-Identifier: MIT
+pragma solidity 0.8.23;
 
-import "@account-abstraction/contracts/core/BasePaymaster.sol";
-import "@account-abstraction/contracts/core/EntryPoint.sol";
-import "@account-abstraction/contracts/core/Helpers.sol";
-import "@account-abstraction/contracts/core/UserOperationLib.sol";
-import "@account-abstraction/contracts/interfaces/PackedUserOperation.sol";
-import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
-import "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
-import "./interfaces/IOracle.sol";
-import "./utils/SafeTransferLib.sol";
+import {BasePaymaster} from "@account-abstraction/contracts/core/BasePaymaster.sol";
+import {IEntryPoint} from "@account-abstraction/contracts/core/EntryPoint.sol";
+import {_packValidationData} from "@account-abstraction/contracts/core/Helpers.sol";
+import {UserOperationLib} from "@account-abstraction/contracts/core/UserOperationLib.sol";
+import {PackedUserOperation} from "@account-abstraction/contracts/interfaces/PackedUserOperation.sol";
+import {IERC20Metadata, IERC20} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import {SignatureChecker} from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
+import {IOracle} from "./interfaces/IOracle.sol";
+import {SafeTransferLib} from "./utils/SafeTransferLib.sol";
 
 using UserOperationLib for PackedUserOperation;
 
@@ -20,6 +19,7 @@ using UserOperationLib for PackedUserOperation;
 /// @notice An ERC-4337 Paymaster contract which is able to sponsor gas fees in exchange for ERC-20 tokens.
 /// The contract refunds excess tokens. It also allows updating price configuration and withdrawing tokens by the contract owner.
 /// The contract uses oracles to fetch the latest token prices.
+/// The paymaster supports standard and up-rebasing ERC-20 tokens. It does not support down-rebasing and fee-on-transfer tokens.
 /// @dev Inherits from BasePaymaster.
 /// @custom:security-contact security@pimlico.io
 contract ERC20Paymaster is BasePaymaster {
@@ -29,6 +29,9 @@ contract ERC20Paymaster is BasePaymaster {
 
     /// @dev The paymaster data mode is invalid. The mode should be 0, 1, 2, or 3.
     error PaymasterDataModeInvalid();
+
+    /// @dev The paymaster data length is invalid for the selected mode.
+    error PaymasterDataLengthInvalid();
 
     /// @dev The token amount is higher than the limit set.
     error TokenAmountTooHigh();
@@ -42,14 +45,11 @@ contract ERC20Paymaster is BasePaymaster {
     /// @dev The price markup selected is lower than break-even.
     error PriceMarkupTooLow();
 
-    /// @dev The oracle price is incomplete.
-    error OracleRoundIncomplete();
-
     /// @dev The oracle price is stale.
     error OraclePriceStale();
 
     /// @dev The oracle price is less than or equal to zero.
-    error OraclePriceZero();
+    error OraclePriceNotPositive();
 
     /// @dev The oracle decimals are not set to 8.
     error OracleDecimalsInvalid();
@@ -79,7 +79,10 @@ contract ERC20Paymaster is BasePaymaster {
     uint256 public constant PRICE_DENOMINATOR = 1e6;
 
     /// @dev The estimated gas cost for refunding tokens after the transaction is completed.
-    uint256 public constant REFUND_POSTOP_COST = 30000;
+    uint256 public immutable refundPostOpCost;
+
+    /// @dev The estimated gas cost for refunding tokens after the transaction is completed with a guarantor.
+    uint256 public immutable refundPostOpCostWithGuarantor;
 
     /// @dev The ERC20 token used for transaction fee payments.
     IERC20 public immutable token;
@@ -92,6 +95,9 @@ contract ERC20Paymaster is BasePaymaster {
 
     /// @dev The Oracle contract used to fetch the latest native asset (e.g. ETH) to USD prices.
     IOracle public immutable nativeAssetOracle;
+
+    // @dev The amount of time in seconds after which an oracle result should be considered stale.
+    uint32 public immutable stalenessThreshold;
 
     /// @dev The maximum price markup percentage allowed (1e6 = 100%).
     uint32 public immutable priceMarkupLimit;
@@ -115,20 +121,28 @@ contract ERC20Paymaster is BasePaymaster {
     /// @param _owner The address that will be set as the owner of the contract.
     /// @param _priceMarkupLimit The maximum price markup percentage allowed (1e6 = 100%).
     /// @param _priceMarkup The initial price markup percentage applied to the token price (1e6 = 100%).
+    /// @param _refundPostOpCost The estimated gas cost for refunding tokens after the transaction is completed.
+    /// @param _refundPostOpCostWithGuarantor The estimated gas cost for refunding tokens after the transaction is completed with a guarantor.
     constructor(
         IERC20Metadata _token,
         IEntryPoint _entryPoint,
         IOracle _tokenOracle,
         IOracle _nativeAssetOracle,
+        uint32 _stalenessThreshold,
         address _owner,
         uint32 _priceMarkupLimit,
-        uint32 _priceMarkup
+        uint32 _priceMarkup,
+        uint256 _refundPostOpCost,
+        uint256 _refundPostOpCostWithGuarantor
     ) BasePaymaster(_entryPoint) {
         token = _token;
         tokenOracle = _tokenOracle; // oracle for token -> usd
         nativeAssetOracle = _nativeAssetOracle; // oracle for native asset(eth/matic/avax..) -> usd
+        stalenessThreshold = _stalenessThreshold;
         priceMarkupLimit = _priceMarkupLimit;
         priceMarkup = _priceMarkup;
+        refundPostOpCost = _refundPostOpCost;
+        refundPostOpCostWithGuarantor = _refundPostOpCostWithGuarantor;
         transferOwnership(_owner);
         tokenDecimals = 10 ** _token.decimals();
         if (_priceMarkup < 1e6) {
@@ -146,10 +160,10 @@ contract ERC20Paymaster is BasePaymaster {
     /*                ERC-4337 PAYMASTER FUNCTIONS                */
     /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
-    /// @notice Validates a paymaster user operation and calculates the required token amount for the transaction.
+    /// @notice Validates the paymaster data, calculates the required token amount, and transfers the tokens.
     /// @dev The paymaster supports one of four modes:
     /// 0. user pays, no limit
-    ///     empty bytes
+    ///     empty bytes (or any bytes with the first byte = 0x00)
     /// 1. user pays, with a limit
     ///     hex"01" + token spend limit (32 bytes)
     /// 2. user pays with a guarantor, no limit
@@ -159,7 +173,7 @@ contract ERC20Paymaster is BasePaymaster {
     /// Note: modes 2 and 3 are not compatible with the default storage access rules of ERC-4337 and require a whitelist for the guarantors.
     /// @param userOp The user operation.
     /// @param userOpHash The hash of the user operation.
-    /// @param maxCost The amount of tokens required for pre-funding.
+    /// @param maxCost The maximum cost in native tokens of this user operation.
     /// @return context The context containing the token amount and user sender address (if applicable).
     /// @return validationResult A uint256 value indicating the result of the validation (always 0 in this implementation).
     function _validatePaymasterUserOp(PackedUserOperation calldata userOp, bytes32 userOpHash, uint256 maxCost)
@@ -169,8 +183,8 @@ contract ERC20Paymaster is BasePaymaster {
     {
         (uint8 mode, bytes calldata paymasterConfig) = _parsePaymasterAndData(userOp.paymasterAndData);
 
-        // 0xfc is the mask for the last 2 bits 00 which means mode should be 00(0) || 01(1) || 10(2) || 11(3)
-        if (mode & 0xfc != 0) {
+        // valid modes are 0, 1, 2, 3
+        if (mode >= 4) {
             revert PaymasterDataModeInvalid();
         }
 
@@ -178,8 +192,13 @@ contract ERC20Paymaster is BasePaymaster {
         uint256 tokenAmount;
         {
             uint256 maxFeePerGas = UserOperationLib.unpackMaxFeePerGas(userOp);
-            tokenAmount =
-                (maxCost + (REFUND_POSTOP_COST) * maxFeePerGas) * priceMarkup * tokenPrice / (1e18 * PRICE_DENOMINATOR);
+            if (mode == 0 || mode == 1) {
+                tokenAmount = (maxCost + (refundPostOpCost) * maxFeePerGas) * priceMarkup * tokenPrice
+                    / (1e18 * PRICE_DENOMINATOR);
+            } else {
+                tokenAmount = (maxCost + (refundPostOpCostWithGuarantor) * maxFeePerGas) * priceMarkup * tokenPrice
+                    / (1e18 * PRICE_DENOMINATOR);
+            }
         }
 
         if (mode == 0) {
@@ -187,6 +206,9 @@ contract ERC20Paymaster is BasePaymaster {
             context = abi.encodePacked(tokenAmount, tokenPrice, userOp.sender, userOpHash);
             validationResult = 0;
         } else if (mode == 1) {
+            if (paymasterConfig.length != 32) {
+                revert PaymasterDataLengthInvalid();
+            }
             if (uint256(bytes32(paymasterConfig[0:32])) == 0) {
                 revert TokenLimitZero();
             }
@@ -197,6 +219,10 @@ contract ERC20Paymaster is BasePaymaster {
             context = abi.encodePacked(tokenAmount, tokenPrice, userOp.sender, userOpHash);
             validationResult = 0;
         } else if (mode == 2) {
+            if (paymasterConfig.length < 32) {
+                revert PaymasterDataLengthInvalid();
+            }
+
             address guarantor = address(bytes20(paymasterConfig[0:20]));
 
             bool signatureValid = SignatureChecker.isValidSignatureNow(
@@ -211,6 +237,10 @@ contract ERC20Paymaster is BasePaymaster {
                 !signatureValid, uint48(bytes6(paymasterConfig[20:26])), uint48(bytes6(paymasterConfig[26:32]))
             );
         } else {
+            if (paymasterConfig.length < 64) {
+                revert PaymasterDataLengthInvalid();
+            }
+
             address guarantor = address(bytes20(paymasterConfig[32:52]));
 
             if (uint256(bytes32(paymasterConfig[0:32])) == 0) {
@@ -251,10 +281,11 @@ contract ERC20Paymaster is BasePaymaster {
         uint192 tokenPrice = uint192(bytes24(context[32:56]));
         address sender = address(bytes20(context[56:76]));
         bytes32 userOpHash = bytes32(context[76:108]);
-        uint256 actualTokenNeeded = (actualGasCost + REFUND_POSTOP_COST * actualUserOpFeePerGas) * priceMarkup
-            * tokenPrice / (1e18 * PRICE_DENOMINATOR);
 
         if (context.length == 128) {
+            // A guarantor is used
+            uint256 actualTokenNeeded = (actualGasCost + refundPostOpCostWithGuarantor * actualUserOpFeePerGas)
+                * priceMarkup * tokenPrice / (1e18 * PRICE_DENOMINATOR);
             address guarantor = address(bytes20(context[108:128]));
 
             bool success = SafeTransferLib.trySafeTransferFrom(address(token), sender, address(this), actualTokenNeeded);
@@ -268,6 +299,9 @@ contract ERC20Paymaster is BasePaymaster {
                 emit UserOperationSponsored(userOpHash, sender, guarantor, actualTokenNeeded, tokenPrice, true);
             }
         } else {
+            uint256 actualTokenNeeded = (actualGasCost + refundPostOpCost * actualUserOpFeePerGas) * priceMarkup
+                * tokenPrice / (1e18 * PRICE_DENOMINATOR);
+
             SafeTransferLib.safeTransfer(address(token), sender, prefundTokenAmount - actualTokenNeeded);
             emit UserOperationSponsored(userOpHash, sender, address(0), actualTokenNeeded, tokenPrice, false);
         }
@@ -361,15 +395,11 @@ contract ERC20Paymaster is BasePaymaster {
     /// @param _oracle The oracle contract to fetch the price from.
     /// @return price The latest price fetched from the oracle.
     function _fetchPrice(IOracle _oracle) internal view returns (uint192 price) {
-        (uint80 roundId, int256 answer,, uint256 updatedAt, uint80 answeredInRound) = _oracle.latestRoundData();
+        (, int256 answer,, uint256 updatedAt,) = _oracle.latestRoundData();
         if (answer <= 0) {
-            revert OraclePriceZero();
+            revert OraclePriceNotPositive();
         }
-        // 2 days old price is considered stale since the price is updated every 24 hours
-        if (updatedAt < block.timestamp - 60 * 60 * 24 * 2) {
-            revert OracleRoundIncomplete();
-        }
-        if (answeredInRound < roundId) {
+        if (updatedAt < block.timestamp - stalenessThreshold) {
             revert OraclePriceStale();
         }
         price = uint192(int192(answer));
