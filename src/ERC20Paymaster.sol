@@ -158,10 +158,10 @@ contract ERC20Paymaster is BasePaymaster {
     /*                ERC-4337 PAYMASTER FUNCTIONS                */
     /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
-    /// @notice Validates a paymaster user operation and calculates the required token amount for the transaction.
+    /// @notice Validates the paymaster data, calculates the required token amount, and transfers the tokens.
     /// @dev The paymaster supports one of four modes:
     /// 0. user pays, no limit
-    ///     empty bytes
+    ///     empty bytes (or any bytes with the first byte = 0x00)
     /// 1. user pays, with a limit
     ///     hex"01" + token spend limit (32 bytes)
     /// 2. user pays with a guarantor, no limit
