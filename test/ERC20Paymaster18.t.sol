@@ -49,8 +49,9 @@ contract ERC20Paymaster18Test is Test {
         nativeAssetOracle = new TestOracle();
         nativeAssetOracle.setPrice(2000_00000000);
         accountFactory = new SimpleAccountFactory(entryPoint);
-        paymaster =
-            new ERC20Paymaster(token, entryPoint, tokenOracle, nativeAssetOracle, paymasterOperator, 120e4, 100e4);
+        paymaster = new ERC20Paymaster(
+            token, entryPoint, tokenOracle, nativeAssetOracle, paymasterOperator, 120e4, 100e4, 30000, 50000
+        );
         account = accountFactory.createAccount(user, 0);
         counter = new TestCounter();
         vm.deal(paymasterOperator, 1000e18);
@@ -62,8 +63,9 @@ contract ERC20Paymaster18Test is Test {
     }
 
     function testDeploy() external {
-        ERC20Paymaster testArtifact =
-            new ERC20Paymaster(token, entryPoint, tokenOracle, nativeAssetOracle, paymasterOperator, 120e4, 100e4);
+        ERC20Paymaster testArtifact = new ERC20Paymaster(
+            token, entryPoint, tokenOracle, nativeAssetOracle, paymasterOperator, 120e4, 100e4, 30000, 50000
+        );
         assertEq(address(testArtifact.token()), address(token));
         assertEq(address(testArtifact.entryPoint()), address(entryPoint));
         assertEq(address(testArtifact.tokenOracle()), address(tokenOracle));
@@ -193,7 +195,7 @@ contract ERC20Paymaster18Test is Test {
 
         op.paymasterAndData = abi.encodePacked(address(paymaster), uint128(100000), uint128(50000));
         uint256 maxFeePerGas = uint256(uint128(uint256(op.gasFees)));
-        uint256 limit = (getRequiredPrefund(op) + (paymaster.REFUND_POSTOP_COST() * maxFeePerGas))
+        uint256 limit = (getRequiredPrefund(op) + (paymaster.refundPostOpCost() * maxFeePerGas))
             * paymaster.priceMarkup() * paymaster.getPrice() / (1e18 * paymaster.PRICE_DENOMINATOR());
 
         op.paymasterAndData = abi.encodePacked(address(paymaster), uint128(100000), uint128(50000), hex"01", limit);
@@ -211,7 +213,7 @@ contract ERC20Paymaster18Test is Test {
 
         op.paymasterAndData = abi.encodePacked(address(paymaster), uint128(100000), uint128(50000));
         uint256 maxFeePerGas = uint256(uint128(uint256(op.gasFees)));
-        uint256 limit = (getRequiredPrefund(op) + (paymaster.REFUND_POSTOP_COST() * maxFeePerGas))
+        uint256 limit = (getRequiredPrefund(op) + (paymaster.refundPostOpCost() * maxFeePerGas))
             * paymaster.priceMarkup() * paymaster.getPrice() / (1e18 * paymaster.PRICE_DENOMINATOR()) - 1;
 
         op.paymasterAndData = abi.encodePacked(address(paymaster), uint128(100000), uint128(50000), hex"01", limit);
@@ -365,7 +367,7 @@ contract ERC20Paymaster18Test is Test {
 
         op.paymasterAndData = abi.encodePacked(address(paymaster), uint128(100000), uint128(50000));
         uint256 maxFeePerGas = uint256(uint128(uint256(op.gasFees)));
-        uint256 limit = (getRequiredPrefund(op) + (paymaster.REFUND_POSTOP_COST() * maxFeePerGas))
+        uint256 limit = (getRequiredPrefund(op) + (paymaster.refundPostOpCostWithGuarantor() * maxFeePerGas))
             * paymaster.priceMarkup() * paymaster.getPrice() / (1e18 * paymaster.PRICE_DENOMINATOR());
 
         uint48 validUntil = 0;
@@ -401,7 +403,7 @@ contract ERC20Paymaster18Test is Test {
 
         op.paymasterAndData = abi.encodePacked(address(paymaster), uint128(100000), uint128(50000));
         uint256 maxFeePerGas = uint256(uint128(uint256(op.gasFees)));
-        uint256 limit = (getRequiredPrefund(op) + (paymaster.REFUND_POSTOP_COST() * maxFeePerGas))
+        uint256 limit = (getRequiredPrefund(op) + (paymaster.refundPostOpCost() * maxFeePerGas))
             * paymaster.priceMarkup() * paymaster.getPrice() / (1e18 * paymaster.PRICE_DENOMINATOR()) - 1;
 
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(guarantorKey, paymaster.getHash(op, 0, 0, limit));
@@ -465,7 +467,7 @@ contract ERC20Paymaster18Test is Test {
 
         op.paymasterAndData = abi.encodePacked(address(paymaster), uint128(100000), uint128(50000));
         uint256 maxFeePerGas = uint256(uint128(uint256(op.gasFees)));
-        uint256 limit = (getRequiredPrefund(op) + (paymaster.REFUND_POSTOP_COST() * maxFeePerGas))
+        uint256 limit = (getRequiredPrefund(op) + (paymaster.refundPostOpCostWithGuarantor() * maxFeePerGas))
             * paymaster.priceMarkup() * paymaster.getPrice() / (1e18 * paymaster.PRICE_DENOMINATOR());
 
         uint48 validUntil = uint48(0);
