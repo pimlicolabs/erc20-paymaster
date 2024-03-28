@@ -58,7 +58,7 @@ contract ERC20PaymasterSymbolicTest is SymTest, Test {
         nativeAssetOracle.setPrice(2000_00000000);
         accountFactory = new SimpleAccountFactory(entryPoint);
         paymaster = new ERC20Paymaster(
-            token, entryPoint, tokenOracle, nativeAssetOracle, paymasterOperator, 120e4, 100e4, 30000, 50000
+            token, entryPoint, tokenOracle, nativeAssetOracle, 2 * 24 * 60 * 60, paymasterOperator, 120e4, 100e4, 30000, 50000
         );
         account = accountFactory.createAccount(user, 0);
         counter = new TestCounter();
@@ -80,6 +80,7 @@ contract ERC20PaymasterSymbolicTest is SymTest, Test {
             entryPoint,
             tokenOracle,
             nativeAssetOracle,
+            2 * 24 * 60 * 60,
             paymasterOperator,
             priceMarkupLimit,
             initialPriceMarkup,
