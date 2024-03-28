@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: GPL-3.0
-pragma solidity ^0.8.23;
+// SPDX-License-Identifier: MIT
+pragma solidity 0.8.23;
 
 import {BasePaymaster} from "@account-abstraction/contracts/core/BasePaymaster.sol";
 import {IEntryPoint} from "@account-abstraction/contracts/core/EntryPoint.sol";
