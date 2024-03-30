@@ -50,7 +50,16 @@ contract ERC20Paymaster18Test is Test {
         nativeAssetOracle.setPrice(2000_00000000);
         accountFactory = new SimpleAccountFactory(entryPoint);
         paymaster = new ERC20Paymaster(
-            token, entryPoint, tokenOracle, nativeAssetOracle, 2 * 24 * 60 * 60, paymasterOperator, 120e4, 100e4, 30000, 50000
+            token,
+            entryPoint,
+            tokenOracle,
+            nativeAssetOracle,
+            2 * 24 * 60 * 60,
+            paymasterOperator,
+            120e4,
+            100e4,
+            30000,
+            50000
         );
         account = accountFactory.createAccount(user, 0);
         counter = new TestCounter();
@@ -64,7 +73,16 @@ contract ERC20Paymaster18Test is Test {
 
     function testDeploy() external {
         ERC20Paymaster testArtifact = new ERC20Paymaster(
-            token, entryPoint, tokenOracle, nativeAssetOracle, 2 * 24 * 60 * 60, paymasterOperator, 120e4, 100e4, 30000, 50000
+            token,
+            entryPoint,
+            tokenOracle,
+            nativeAssetOracle,
+            2 * 24 * 60 * 60,
+            paymasterOperator,
+            120e4,
+            100e4,
+            30000,
+            50000
         );
         assertEq(address(testArtifact.token()), address(token));
         assertEq(address(testArtifact.entryPoint()), address(entryPoint));
