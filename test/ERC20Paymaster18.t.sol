@@ -224,7 +224,7 @@ contract ERC20Paymaster18Test is Test {
 
         op.paymasterAndData = abi.encodePacked(address(paymaster), uint128(100000), uint128(50000));
         uint256 maxFeePerGas = uint256(uint128(uint256(op.gasFees)));
-        uint256 limit = (getRequiredPrefund(op) + (paymaster.REFUND_POSTOP_COST() * maxFeePerGas))
+        uint256 limit = (getRequiredPrefund(op) + (paymaster.refundPostOpCost() * maxFeePerGas))
             * paymaster.priceMarkup() * paymaster.getPrice() / (1e18 * paymaster.PRICE_DENOMINATOR());
 
         op.paymasterAndData =
