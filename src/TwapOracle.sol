@@ -14,9 +14,16 @@ contract TwapOracle is IOracle, Ownable {
     /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
     /*                       CUSTOM ERRORS                        */
     /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+    /// @dev Invalid TWAP age, either too low or too high
     error InvalidTwapAge();
 
+    /// @dev Pool doesn't contain the base token
     error InvalidTokenOrPool();
+
+    /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+    /*                           EVENTS                           */
+    /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+    event UpdatedTwapAge(uint32 twapAge);
 
     /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
     /*                  CONSTANTS AND IMMUTABLES                  */
@@ -84,12 +91,6 @@ contract TwapOracle is IOracle, Ownable {
         _setTwapAge(_twapAge);
     }
 
-    function _setTwapAge(uint32 _twapAge) internal {
-        if (_twapAge < MINIMUM_TWAP_AGE || _twapAge > MAXIMUM_TWAP_AGE) revert InvalidTwapAge();
-
-        twapAge = _twapAge;
-    }
-
     function latestRoundData() external override view returns (
         uint80 roundId,
         int256 answer,
@@ -105,6 +106,14 @@ contract TwapOracle is IOracle, Ownable {
         uint256 price = _price * ORACLE_DECIMALS / quoteTokenDecimals;
 
         return _buildLatestRoundData(price);
+    }
+
+    function _setTwapAge(uint32 _twapAge) internal {
+        if (_twapAge < MINIMUM_TWAP_AGE || _twapAge > MAXIMUM_TWAP_AGE) revert InvalidTwapAge();
+
+        twapAge = _twapAge;
+
+        emit UpdatedTwapAge(_twapAge);
     }
 
     function _buildLatestRoundData(uint256 price) internal view returns (

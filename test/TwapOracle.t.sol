@@ -2,16 +2,17 @@
 pragma solidity ^0.8.0;
 
 import "src/TwapOracle.sol";
+import {ForkNetwork, Fork} from "./utils/Fork.sol";
 
 import "forge-std/Test.sol";
 import "forge-std/console.sol";
 
 import {IUniswapV3Pool} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 
-contract TwapOracleTest is Test {
+contract TwapOracleTest is Test, Fork {
     address owner;
 
-    function setUp() external {
+    function setUp() onFork(ForkNetwork.MAINNET, 19641719) external {
         owner = makeAddr("owner");
     }
 
@@ -22,7 +23,7 @@ contract TwapOracleTest is Test {
             false,
             address(pool),
             1 hours,
-            0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599,
+            0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599, // wbtc
             owner
         );
 
@@ -39,12 +40,12 @@ contract TwapOracleTest is Test {
             false,
             address(pool),
             1 hours,
-            0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48,
+            0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48, // usdc
             owner
         );
 
         (,int256 answer,,,) = oracle.latestRoundData();
  
-        assertApproxEqAbs(answer / 10**8, 30000, 5000, "Wrong USDC/WETH price");
+        assertApproxEqAbs(answer, 30000, 5000, "Wrong USDC/WETH price");
     }
 }
