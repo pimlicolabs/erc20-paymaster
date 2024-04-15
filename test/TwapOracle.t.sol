@@ -25,7 +25,26 @@ contract TwapOracleTest is Test, Fork {
         (,int256 answer,,uint256 updatedAt,) = oracle.latestRoundData();
 
         assertEq(updatedAt, block.timestamp - 1);
-        assertApproxEqAbs(answer / 10**8, 60000, 10000, "Wrong BTC/USDT price");
+
+        // Approx 60000$ per btc
+        assertApproxEqAbs(
+            answer / 10**8,
+            60000,
+            10000,
+            "Wrong BTC/USDT price"
+        );
+
+        // Compare with Chainlink value
+        IOracle chainLinkOracle = IOracle(0xF4030086522a5bEEa4988F8cA5B36dbC97BeE88c);
+
+        (,int256 _answer, , ,) = chainLinkOracle.latestRoundData();
+
+        assertApproxEqAbs(
+            answer / 10**8,
+            _answer / 10**8,
+            5000,
+            "Chainlink and TWAP prices are too different"
+        );
     }
 
     function testUsdcWeth() external {
@@ -34,11 +53,29 @@ contract TwapOracleTest is Test, Fork {
         TwapOracle oracle = new TwapOracle(
             address(pool),
             1 hours,
-            0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48 // usdc
+            0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2 // weth
         );
 
         (,int256 answer,,,) = oracle.latestRoundData();
- 
-        assertApproxEqAbs(answer, 30000, 5000, "Wrong USDC/WETH price");
+
+        // Approx 3000$ per eth
+        assertApproxEqAbs(
+            answer / 10**8,
+            3000,
+            500,
+            "Wrong USDC/WETH price"
+        );
+
+        // Compare with Chainlink value
+        IOracle chainLinkOracle = IOracle(0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419);
+
+        (,int256 _answer, , ,) = chainLinkOracle.latestRoundData();
+
+        assertApproxEqAbs(
+            answer / 10**8,
+            _answer / 10**8,
+            500,
+            "Chainlink and TWAP prices are too different"
+        );
     }
 }
