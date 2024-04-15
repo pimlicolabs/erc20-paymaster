@@ -55,12 +55,19 @@ Foundry is used for unit tests.
 forge install
 ```
 
-2. run tests
+2. set up local environment
+
+```shell
+cp .env.sample .env
+# Fill the envs
+```
+
+3. run tests
 ```shell
 forge test
 ```
 
-3. run coverage
+4. run coverage
 ```shell
 forge coverage --ir-minimum 
 ```
