@@ -5,7 +5,13 @@ import {IOracle} from "./../interfaces/IOracle.sol";
 
 
 contract FixedOracle is IOracle {
-    int256 public constant ORACLE_DECIMALS = 1e8;
+    int256 public immutable price;
+
+    constructor(
+        int256 _price
+    ) {
+        price = _price;
+    }
 
     function decimals() external override pure returns (uint8) {
         return 8;
@@ -18,6 +24,6 @@ contract FixedOracle is IOracle {
         uint256 updatedAt,
         uint80 answeredInRound
     ) {
-        return (uint80(0), ORACLE_DECIMALS, 0, block.timestamp - 1, uint80(0));
+        return (uint80(0), price, 0, block.timestamp - 1, uint80(0));
     }
 }
