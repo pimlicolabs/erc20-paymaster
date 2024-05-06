@@ -4,7 +4,7 @@ pragma solidity 0.8.23;
 import {IOracle} from "./../interfaces/IOracle.sol";
 
 
-contract FixedPriceOracle is IOracle {
+contract FixedOracle is IOracle {
     int256 public constant ORACLE_DECIMALS = 1e8;
 
     function decimals() external override pure returns (uint8) {

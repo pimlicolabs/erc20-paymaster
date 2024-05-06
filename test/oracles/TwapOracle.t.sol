@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 import "src/oracles/TwapOracle.sol";
-import {ForkNetwork, Fork} from "./utils/Fork.sol";
+import {ForkNetwork, Fork} from "./../utils/Fork.sol";
 import {IUniswapV3Pool} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import "forge-std/Test.sol";
 import "forge-std/console.sol";
