@@ -78,19 +78,19 @@ Generally, the ERC20 paymaster is supposed to rely on Chainlink oracles. However
 
 #### TWAP oracle
 
-- Link: ([src/oracles/TwapOracle.sol](./src/oracles/TwapOracle.sol))
+- [src/oracles/TwapOracle.sol](./src/oracles/TwapOracle.sol)
 
 TWAP oracle relies on the TWAP, received from the existing Uniswap V3 pool. The TWAP is fetched for the `uint32 twapAge` seconds, this parameter can't be changed after deployment. The oracle is built around official Uniswap's [OracleLibrary](https://docs.uniswap.org/contracts/v3/reference/periphery/libraries/OracleLibrary) implementation.
 
 #### Manual oracle
 
-- Link: ([src/oracles/TwapOracle.sol](./src/oracles/TwapOracle.sol))
+- [src/oracles/ManualOracle.sol](./src/oracles/ManualOracle.sol)
 
 Manual oracle returns a fixed price, specified by the owner. The price can be changed an infinite amount of times.
 
 #### Fixed oracle
 
-- Link: ([src/oracles/TwapOracle.sol](./src/oracles/TwapOracle.sol))
+- [src/oracles/FixedOracle.sol](./src/oracles/FixedOracle.sol)
 
 Fixed oracle always returns the same price equal to `1e8` (`100_000_000`).
 
