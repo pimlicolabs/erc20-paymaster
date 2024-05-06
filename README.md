@@ -40,10 +40,6 @@ Mode 3:
 - There is a limit to the amount of ERC-20 tokens that can be taken from the user/guarantor for the user opertion.
 - `paymasterData`: "0x03" + token spend limit (32 bytes) + guarantor address (20 bytes) + validUntil (6 bytes) + validAfter (6 bytes) + guarantor signature (dynamic bytes)
 
-## TwapOracle
-
-[TwapOracle.sol](./src/oracles/TwapOracle.sol) complies with Chainlink's [IOracle](./src/interfaces/IOracle.sol) interface, but uses Uniswap V3 TWAP as a price provider. The `baseToken`, `twapAge` and `pool` parameters are immutable and can't be changed after deployment. The returned price always has 8 decimals, to comply with a Chainlink oracle.
-
 ## Development
 
 This repository uses Foundry and Halmos for development.
