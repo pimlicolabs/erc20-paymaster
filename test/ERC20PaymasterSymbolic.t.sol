@@ -7,13 +7,11 @@ import "./utils/TestOracle.sol";
 import "./utils/TestCounter.sol";
 import "./utils/BytesLib.sol";
 import "@account-abstraction/contracts/core/EntryPoint.sol";
-import "@account-abstraction/contracts/core/EntryPointSimulations.sol";
-import "@account-abstraction/contracts/interfaces/PackedUserOperation.sol";
 import "@account-abstraction/contracts/samples/SimpleAccountFactory.sol";
 import "forge-std/Test.sol";
 import "forge-std/console.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
+// import "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 
 import {SymTest} from "halmos-cheatcodes/SymTest.sol";
 
@@ -21,7 +19,6 @@ using ECDSA for bytes32;
 
 contract ERC20PaymasterSymbolicTest is SymTest, Test {
     EntryPoint entryPoint;
-    EntryPointSimulations entryPointSimulations;
     SimpleAccountFactory accountFactory;
     ERC20Paymaster paymaster;
     TestERC20 token;
@@ -50,7 +47,6 @@ contract ERC20PaymasterSymbolicTest is SymTest, Test {
         );
 
         entryPoint = new EntryPoint();
-        entryPointSimulations = new EntryPointSimulations();
         token = new TestERC20(18);
         tokenOracle = new TestOracle();
         tokenOracle.setPrice(1_00000000);

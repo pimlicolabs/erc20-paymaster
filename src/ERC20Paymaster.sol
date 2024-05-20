@@ -1,17 +1,23 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.23;
 
-import {BasePaymaster} from "@account-abstraction/contracts/core/BasePaymaster.sol";
-import {IEntryPoint} from "@account-abstraction/contracts/core/EntryPoint.sol";
+
+import {IEntryPoint} from "@account-abstraction/contracts/interfaces/IEntryPoint.sol";
+import {UserOperationLib, UserOperation} from "@account-abstraction/contracts/interfaces/UserOperation.sol";
 import {_packValidationData} from "@account-abstraction/contracts/core/Helpers.sol";
-import {UserOperationLib} from "@account-abstraction/contracts/core/UserOperationLib.sol";
-import {PackedUserOperation} from "@account-abstraction/contracts/interfaces/PackedUserOperation.sol";
+
 import {IERC20Metadata, IERC20} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {SignatureChecker} from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
+
 import {IOracle} from "./interfaces/IOracle.sol";
 import {SafeTransferLib} from "./utils/SafeTransferLib.sol";
+// import {BasePaymasterV06} from "./base/BasePaymasterV06.sol";
+import {BasePaymaster} from "@account-abstraction/contracts/core/BasePaymaster.sol";
 
-using UserOperationLib for PackedUserOperation;
+import "forge-std/console.sol";
+
+using UserOperationLib for UserOperation;
+
 
 /// @title ERC20Paymaster
 /// @author Pimlico (https://github.com/pimlicolabs/erc20-paymaster/blob/main/src/ERC20Paymaster.sol)
@@ -23,6 +29,10 @@ using UserOperationLib for PackedUserOperation;
 /// @dev Inherits from BasePaymaster.
 /// @custom:security-contact security@pimlico.io
 contract ERC20Paymaster is BasePaymaster {
+    uint256 internal constant PAYMASTER_VALIDATION_GAS_OFFSET = 20;
+    uint256 internal constant PAYMASTER_POSTOP_GAS_OFFSET = 36;
+    uint256 internal constant PAYMASTER_DATA_OFFSET = 52;
+
     /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
     /*                       CUSTOM ERRORS                        */
     /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
@@ -176,7 +186,7 @@ contract ERC20Paymaster is BasePaymaster {
     /// @param maxCost The maximum cost in native tokens of this user operation.
     /// @return context The context containing the token amount and user sender address (if applicable).
     /// @return validationResult A uint256 value indicating the result of the validation (always 0 in this implementation).
-    function _validatePaymasterUserOp(PackedUserOperation calldata userOp, bytes32 userOpHash, uint256 maxCost)
+    function _validatePaymasterUserOp(UserOperation calldata userOp, bytes32 userOpHash, uint256 maxCost)
         internal
         override
         returns (bytes memory context, uint256 validationResult)
@@ -191,7 +201,7 @@ contract ERC20Paymaster is BasePaymaster {
         uint192 tokenPrice = getPrice();
         uint256 tokenAmount;
         {
-            uint256 maxFeePerGas = UserOperationLib.unpackMaxFeePerGas(userOp);
+            uint256 maxFeePerGas = userOp.maxFeePerGas;
             if (mode == 0 || mode == 1) {
                 tokenAmount = (maxCost + (refundPostOpCost) * maxFeePerGas) * priceMarkup * tokenPrice
                     / (1e18 * PRICE_DENOMINATOR);
@@ -273,7 +283,7 @@ contract ERC20Paymaster is BasePaymaster {
     /// @dev This function is called after a user operation has been executed or reverted.
     /// @param context The context containing the token amount and user sender address.
     /// @param actualGasCost The actual gas cost of the transaction.
-    function _postOp(PostOpMode, bytes calldata context, uint256 actualGasCost, uint256 actualUserOpFeePerGas)
+    function _postOp(PostOpMode, bytes calldata context, uint256 actualGasCost)
         internal
         override
     {
@@ -284,7 +294,7 @@ contract ERC20Paymaster is BasePaymaster {
 
         if (context.length == 128) {
             // A guarantor is used
-            uint256 actualTokenNeeded = (actualGasCost + refundPostOpCostWithGuarantor * actualUserOpFeePerGas)
+            uint256 actualTokenNeeded = (actualGasCost + refundPostOpCostWithGuarantor)
                 * priceMarkup * tokenPrice / (1e18 * PRICE_DENOMINATOR);
             address guarantor = address(bytes20(context[108:128]));
 
@@ -299,7 +309,7 @@ contract ERC20Paymaster is BasePaymaster {
                 emit UserOperationSponsored(userOpHash, sender, guarantor, actualTokenNeeded, tokenPrice, true);
             }
         } else {
-            uint256 actualTokenNeeded = (actualGasCost + refundPostOpCost * actualUserOpFeePerGas) * priceMarkup
+            uint256 actualTokenNeeded = (actualGasCost + refundPostOpCost) * priceMarkup
                 * tokenPrice / (1e18 * PRICE_DENOMINATOR);
 
             SafeTransferLib.safeTransfer(address(token), sender, prefundTokenAmount - actualTokenNeeded);
@@ -345,27 +355,53 @@ contract ERC20Paymaster is BasePaymaster {
         return price;
     }
 
-    /// @notice Hashes the user operation data.
-    /// @param userOp The user operation data.
-    /// @param validUntil The timestamp until which the user operation is valid.
-    /// @param validAfter The timestamp after which the user operation is valid.
-    /// @param tokenLimit The maximum amount of tokens allowed for the user operation. 0 if no limit.
-    function getHash(PackedUserOperation calldata userOp, uint48 validUntil, uint48 validAfter, uint256 tokenLimit)
-        public
-        view
-        returns (bytes32)
-    {
-        address sender = userOp.getSender();
+    // /// @notice Hashes the user operation data.
+    // /// @param userOp The user operation data.
+    // /// @param validUntil The timestamp until which the user operation is valid.
+    // /// @param validAfter The timestamp after which the user operation is valid.
+    // /// @param tokenLimit The maximum amount of tokens allowed for the user operation. 0 if no limit.
+    // function getHash(UserOperation calldata userOp, uint48 validUntil, uint48 validAfter, uint256 tokenLimit)
+    //     public
+    //     view
+    //     returns (bytes32)
+    // {
+    //     address sender = userOp.getSender();
+    //     return keccak256(
+    //         abi.encode(
+    //             sender,
+    //             userOp.nonce,
+    //             keccak256(userOp.initCode),
+    //             keccak256(userOp.callData),
+    //             userOp.accountGasLimits,
+    //             uint256(bytes32(userOp.paymasterAndData[PAYMASTER_VALIDATION_GAS_OFFSET:PAYMASTER_DATA_OFFSET])),
+    //             userOp.preVerificationGas,
+    //             userOp.gasFees,
+    //             block.chainid,
+    //             address(this),
+    //             validUntil,
+    //             validAfter,
+    //             tokenLimit
+    //         )
+    //     );
+    // }
+    function getHash(
+        UserOperation calldata userOp,
+        uint48 validUntil,
+        uint48 validAfter,
+        uint256 tokenLimit
+    ) public view returns (bytes32) {
         return keccak256(
             abi.encode(
-                sender,
+                userOp.sender,
                 userOp.nonce,
                 keccak256(userOp.initCode),
                 keccak256(userOp.callData),
-                userOp.accountGasLimits,
-                uint256(bytes32(userOp.paymasterAndData[PAYMASTER_VALIDATION_GAS_OFFSET:PAYMASTER_DATA_OFFSET])),
+                userOp.callGasLimit,
+                userOp.verificationGasLimit,
                 userOp.preVerificationGas,
-                userOp.gasFees,
+                userOp.maxFeePerGas,
+                userOp.maxPriorityFeePerGas,
+                uint256(bytes32(userOp.paymasterAndData[PAYMASTER_VALIDATION_GAS_OFFSET:PAYMASTER_DATA_OFFSET])),
                 block.chainid,
                 address(this),
                 validUntil,
@@ -374,6 +410,7 @@ contract ERC20Paymaster is BasePaymaster {
             )
         );
     }
+
 
     /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
     /*                      INTERNAL HELPERS                      */
