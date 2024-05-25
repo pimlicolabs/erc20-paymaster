@@ -19,9 +19,6 @@
 [submodule "lib/openzeppelin-contracts-v5.0.0"]
 	path = lib/openzeppelin-contracts-v5.0.0
 	url = https://github.com/openZeppelin/openzeppelin-contracts
-[submodule "lib/openzeppelin-contracts-v4.2.0"]
-	path = lib/openzeppelin-contracts-v4.2.0
-	url = https://github.com/openZeppelin/openzeppelin-contracts
 [submodule "lib/openzeppelin-contracts-v4.8.0"]
 	path = lib/openzeppelin-contracts-v4.8.0
 	url = https://github.com/openZeppelin/openzeppelin-contracts
