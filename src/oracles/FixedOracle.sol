@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.23;
 
-import {IOracle} from "./../interfaces/IOracle.sol";
+import {IOracle} from "./../interfaces/oracles/IOracle.sol";
 
 
 contract FixedOracle is IOracle {

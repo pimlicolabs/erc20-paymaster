@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.23;
 
-import {IOracle} from "./../interfaces/IOracle.sol";
+import {IOracle} from "./../interfaces/oracles/IOracle.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {OracleLibrary} from "@v3-periphery/contracts/libraries/OracleLibrary.sol";
 import {IUniswapV3PoolImmutables} from "@uniswap/v3-core/contracts/interfaces/pool/IUniswapV3PoolImmutables.sol";

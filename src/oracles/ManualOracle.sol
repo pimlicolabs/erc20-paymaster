@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.23;
 
-import {IOracle} from "./../interfaces/IOracle.sol";
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {IOracle} from "./../interfaces/oracles/IOracle.sol";
+import {Ownable} from "@openzeppelin-v5.0.0/contracts/access/Ownable.sol";
 
 
 contract ManualOracle is IOracle, Ownable {
