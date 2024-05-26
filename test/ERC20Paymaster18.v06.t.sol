@@ -131,15 +131,14 @@ contract ERC20Paymaster18Test is Test {
         vm.stopPrank();
     }
 
-    // TODO: old oz has different revert message
-    // function testWithdrawTokenFailNotOwner(uint256 _amount) external {
-    //     vm.assume(_amount < token.totalSupply());
-    //     token.sudoMint(address(paymaster), _amount);
-    //     vm.startPrank(beneficiary);
-    //     vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", beneficiary));
-    //     paymaster.withdrawToken(beneficiary, _amount);
-    //     vm.stopPrank();
-    // }
+    function testWithdrawTokenFailNotOwner(uint256 _amount) external {
+        vm.assume(_amount < token.totalSupply());
+        token.sudoMint(address(paymaster), _amount);
+        vm.startPrank(beneficiary);
+        vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", beneficiary));
+        paymaster.withdrawToken(beneficiary, _amount);
+        vm.stopPrank();
+    }
 
     function testGetPrice(int192 _price) external {
         vm.assume(_price > 1e8);
@@ -608,7 +607,7 @@ contract ERC20Paymaster18Test is Test {
         op.nonce = entryPoint.getNonce(address(_sender), 0);
         op.callData = abi.encodeWithSelector(SimpleAccount.execute.selector, _to, _value, _data);
         op.callGasLimit = 50000;
-        op.verificationGasLimit = 100000;
+        op.verificationGasLimit = 80000;
         op.preVerificationGas = 50000;
         op.maxFeePerGas = 1000000000;
         op.maxPriorityFeePerGas = 100;

@@ -7,7 +7,7 @@ This repository contains an ERC-4337 paymaster implementation allowing users to 
 ## Features
 - ✅ Users paying with ERC-20 tokens for transaction fees
 - ✅ Using guarantors to front gas fees to allow for token approvals during execution
-- ✅ Compatible with EntryPoint v0.7
+- ✅ Compatible with EntryPoint v0.7 and v0.6
 - ✅ Refunding excess tokens based on the actual user operation cost
 - ✅ Using oracles to fetch latest gas prices
 - ✅ Withdrawing accrued tokens by the contract owner
@@ -74,7 +74,7 @@ forge coverage --ir-minimum
 
 ### Oracles
 
-Generally, the ERC20 paymaster is supposed to rely on Chainlink oracles. However, it may be not presented in some networks or may miss some tokens. To face this issue, we have implemented three additional oracles, which are all compliant with Chainlink's oracle interface
+The ERC20 paymaster is relying on Chainlink oracles. However, they may be not presented in some networks or may miss some tokens. To face this issue, we have implemented three additional oracles, which are all compliant with Chainlink's oracle interface
 
 #### TWAP oracle
 
