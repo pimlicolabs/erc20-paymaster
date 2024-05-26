@@ -3,8 +3,8 @@ pragma solidity ^0.8.23;
 
 /* solhint-disable reason-string */
 
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/utils/introspection/IERC165.sol";
+import "@openzeppelin-v5.0.0/contracts/access/Ownable.sol";
+import "@openzeppelin-v5.0.0/contracts/utils/introspection/IERC165.sol";
 
 import "@account-abstraction-v7/contracts/interfaces/IEntryPoint.sol";
 import {

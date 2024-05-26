@@ -13,8 +13,8 @@ import "@account-abstraction-v7/contracts/interfaces/PackedUserOperation.sol";
 import {SimpleAccountFactory, SimpleAccount} from "src/account-abstraction/v07/samples/SimpleAccountFactory.sol";
 import "forge-std/Test.sol";
 import "forge-std/console.sol";
-import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
+import "@openzeppelin-v5.0.0/contracts/utils/cryptography/ECDSA.sol";
+import "@openzeppelin-v5.0.0/contracts/utils/cryptography/MessageHashUtils.sol";
 
 using ECDSA for bytes32;
 
