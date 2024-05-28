@@ -2,17 +2,21 @@
 pragma solidity ^0.8.0;
 
 import "src/oracles/FixedOracle.sol";
-import {ForkNetwork, Fork} from "./../utils/Fork.sol";
-import {IUniswapV3Pool} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
+import "src/factory/PimlicoFactory.sol";
+
 import "forge-std/Test.sol";
 import "forge-std/console.sol";
 
 
-contract FixedOracleTest is Test, Fork {
+contract FixedOracleTest is Test {
     FixedOracle oracle;
+    PimlicoFactory pimlicoFactory;
 
-    function setUp() onFork(ForkNetwork.MAINNET, 19641719) external {
-        oracle = new FixedOracle(2e3);
+    function setUp() external {
+        pimlicoFactory = new PimlicoFactory();
+
+        address _oracle = pimlicoFactory.deployFixedOracle(2e3);
+        oracle = FixedOracle(_oracle);
     }
 
     function testPrice() external {

@@ -3,6 +3,8 @@ pragma solidity ^0.8.0;
 
 import {ERC20PaymasterV07 as ERC20Paymaster} from "src/ERC20PaymasterV07.sol";
 import "src/base/BaseERC20Paymaster.sol";
+import {PimlicoFactory} from "src/factory/PimlicoFactory.sol";
+import {PaymasterVersion} from "src/factory/FactoryPaymaster.sol";
 import "./utils/TestERC20.sol";
 import "./utils/TestOracle.sol";
 import "./utils/TestCounter.sol";
@@ -20,6 +22,7 @@ using ECDSA for bytes32;
 
 contract ERC20Paymaster18Test is Test {
     EntryPoint entryPoint;
+    PimlicoFactory pimlicoFactory;
     SimpleAccountFactory accountFactory;
     ERC20Paymaster paymaster;
     TestERC20 token;
@@ -47,7 +50,10 @@ contract ERC20Paymaster18Test is Test {
         nativeAssetOracle = new TestOracle();
         nativeAssetOracle.setPrice(2000_00000000);
         accountFactory = new SimpleAccountFactory(entryPoint);
-        paymaster = new ERC20Paymaster(
+        
+        pimlicoFactory = new PimlicoFactory();
+        address _paymaster = pimlicoFactory.deployPaymaster(
+            PaymasterVersion.V07,
             token,
             address(entryPoint),
             tokenOracle,
@@ -59,6 +65,8 @@ contract ERC20Paymaster18Test is Test {
             30000,
             50000
         );
+        paymaster = ERC20Paymaster(_paymaster);
+
         account = accountFactory.createAccount(user, 0);
         counter = new TestCounter();
         vm.deal(paymasterOperator, 1000e18);
@@ -70,22 +78,10 @@ contract ERC20Paymaster18Test is Test {
     }
 
     function testDeploy() external {
-        ERC20Paymaster testArtifact = new ERC20Paymaster(
-            token,
-            address(entryPoint),
-            tokenOracle,
-            nativeAssetOracle,
-            2 * 24 * 60 * 60,
-            paymasterOperator,
-            120e4,
-            100e4,
-            30000,
-            50000
-        );
-        assertEq(address(testArtifact.token()), address(token));
-        assertEq(address(testArtifact.entryPoint()), address(entryPoint));
-        assertEq(address(testArtifact.tokenOracle()), address(tokenOracle));
-        assertEq(address(testArtifact.owner()), paymasterOperator);
+        assertEq(address(paymaster.token()), address(token));
+        assertEq(address(paymaster.entryPoint()), address(entryPoint));
+        assertEq(address(paymaster.tokenOracle()), address(tokenOracle));
+        assertEq(address(paymaster.owner()), paymasterOperator);
     }
 
     function testOwnershipTransfer() external {

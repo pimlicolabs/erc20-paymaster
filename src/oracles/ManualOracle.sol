@@ -26,8 +26,9 @@ contract ManualOracle is IOracle, Ownable {
     int256 public price;
 
     constructor(
-        int256 _price
-    ) Ownable(msg.sender) {
+        int256 _price,
+        address _owner
+    ) Ownable(_owner) {
         _setPrice(_price);
     }
 

@@ -12,12 +12,12 @@ import {SignatureChecker} from "@openzeppelin/contracts/utils/cryptography/Signa
 import {IOracle} from "./interfaces/oracles/IOracle.sol";
 import {SafeTransferLib} from "./utils/SafeTransferLib.sol";
 import {BaseERC20Paymaster} from "./base/BaseERC20Paymaster.sol";
-import {BasePaymaster} from "./base/BasePaymaster.sol";
+import {IPaymaster} from "./interfaces/paymasters/IPaymasterV07.sol";
 
 using UserOperationLib for PackedUserOperation;
 
-/// @title ERC20Paymaster
-/// @author Pimlico (https://github.com/pimlicolabs/erc20-paymaster/blob/main/src/ERC20Paymaster.sol)
+/// @title ERC20PaymasterV07
+/// @author Pimlico (https://github.com/pimlicolabs/erc20-paymaster/blob/main/src/ERC20PaymasterV06.sol)
 /// @author Using Solady (https://github.com/vectorized/solady)
 /// @notice An ERC-4337 Paymaster contract which is able to sponsor gas fees in exchange for ERC-20 tokens.
 /// The contract refunds excess tokens. It also allows updating price configuration and withdrawing tokens by the contract owner.
@@ -25,7 +25,7 @@ using UserOperationLib for PackedUserOperation;
 /// The paymaster supports standard and up-rebasing ERC-20 tokens. It does not support down-rebasing and fee-on-transfer tokens.
 /// @dev Inherits from BaseERC20Paymaster.
 /// @custom:security-contact security@pimlico.io
-contract ERC20PaymasterV07 is BaseERC20Paymaster {
+contract ERC20PaymasterV07 is BaseERC20Paymaster, IPaymaster {
     constructor(
         IERC20Metadata _token,
         address _entryPoint,
@@ -50,29 +50,39 @@ contract ERC20PaymasterV07 is BaseERC20Paymaster {
         _refundPostOpCostWithGuarantor
     ) {}
 
+    /// @inheritdoc IPaymaster
+    function validatePaymasterUserOp(
+        PackedUserOperation calldata userOp,
+        bytes32 userOpHash,
+        uint256 maxCost
+    ) external override returns (bytes memory context, uint256 validationData) {
+        _requireFromEntryPoint();
+        return _validatePaymasterUserOp(userOp, userOpHash, maxCost);
+    }
+
+    /// @inheritdoc IPaymaster
+    function postOp(
+        PostOpMode mode,
+        bytes calldata context,
+        uint256 actualGasCost,
+        uint256 actualUserOpFeePerGas
+    ) external override {
+        _requireFromEntryPoint();
+        _postOp(mode, context, actualGasCost, actualUserOpFeePerGas);
+    }
+
     /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
     /*                ERC-4337 PAYMASTER FUNCTIONS                */
     /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
-    /// @notice Validates the paymaster data, calculates the required token amount, and transfers the tokens.
-    /// @dev The paymaster supports one of four modes:
-    /// 0. user pays, no limit
-    ///     empty bytes (or any bytes with the first byte = 0x00)
-    /// 1. user pays, with a limit
-    ///     hex"01" + token spend limit (32 bytes)
-    /// 2. user pays with a guarantor, no limit
-    ///     hex"02" + guarantor address (20 bytes) + validUntil (6 bytes) + validAfter (6 bytes) + guarantor signature (dynamic bytes)
-    /// 3. user pays with a guarantor, with a limit
-    ///     hex"03" + token spend limit (32 bytes) + guarantor address (20 bytes) + validUntil (6 bytes) + validAfter (6 bytes) + guarantor signature (dynamic bytes)
-    /// Note: modes 2 and 3 are not compatible with the default storage access rules of ERC-4337 and require a whitelist for the guarantors.
-    /// @param userOp The user operation.
-    /// @param userOpHash The hash of the user operation.
-    /// @param maxCost The maximum cost in native tokens of this user operation.
-    /// @return context The context containing the token amount and user sender address (if applicable).
-    /// @return validationResult A uint256 value indicating the result of the validation (always 0 in this implementation).
+    /**
+     * Validate a user operation.
+     * @param userOp     - The user operation.
+     * @param userOpHash - The hash of the user operation.
+     * @param maxCost    - The maximum cost of the user operation.
+     */
     function _validatePaymasterUserOp(PackedUserOperation calldata userOp, bytes32 userOpHash, uint256 maxCost)
         internal
-        override
         returns (bytes memory context, uint256 validationResult)
     {
         (uint8 mode, bytes calldata paymasterConfig) = _parsePaymasterAndData(userOp.paymasterAndData);
@@ -163,13 +173,19 @@ contract ERC20PaymasterV07 is BaseERC20Paymaster {
         }
     }
 
-    /// @notice Performs post-operation tasks, such as refunding excess tokens and attempting to pay back the guarantor if there is one.
-    /// @dev This function is called after a user operation has been executed or reverted.
-    /// @param context The context containing the token amount and user sender address.
-    /// @param actualGasCost The actual gas cost of the transaction.
+    /**
+     * Post-operation handler.
+     * (verified to be called only through the entryPoint)
+     * @dev If subclass returns a non-empty context from validatePaymasterUserOp,
+     *      it must also implement this method.
+     * @param context       - The context value returned by validatePaymasterUserOp
+     * @param actualGasCost - Actual gas used so far (without this postOp call).
+     * @param actualUserOpFeePerGas - the gas price this UserOp pays. This value is based on the UserOp's maxFeePerGas
+     *                        and maxPriorityFee (and basefee)
+     *                        It is not the same as tx.gasprice, which is what the bundler pays.
+     */
     function _postOp(PostOpMode, bytes calldata context, uint256 actualGasCost, uint256 actualUserOpFeePerGas)
         internal
-        override
     {
         uint256 prefundTokenAmount = uint256(bytes32(context[0:32]));
         uint192 tokenPrice = uint192(bytes24(context[32:56]));

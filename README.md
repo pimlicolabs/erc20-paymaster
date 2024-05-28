@@ -74,7 +74,7 @@ forge coverage --ir-minimum
 
 ### Oracles
 
-The ERC20 paymaster is relying on Chainlink oracles. However, they may be not presented in some networks or may miss some tokens. To face this issue, we have implemented three additional oracles, which are all compliant with Chainlink's oracle interface
+The ERC20 paymaster relies on Chainlink oracles. However, they may be not presented in some networks or may miss some tokens. To face this issue, we have implemented three additional oracles, which are all compliant with Chainlink's oracle interface
 
 #### TWAP oracle
 
@@ -92,7 +92,7 @@ Manual oracle returns a fixed price, specified by the owner. The price can be ch
 
 - [src/oracles/FixedOracle.sol](./src/oracles/FixedOracle.sol)
 
-Fixed oracle always returns the same price equal to `1e8` (`100_000_000`).
+Fixed oracle returns the fixed price, specified at the time of deploy.
 
 
 ### Halmos

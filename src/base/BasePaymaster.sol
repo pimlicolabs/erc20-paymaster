@@ -17,14 +17,12 @@ import {
     UserOperation
 } from "@account-abstraction-v6/contracts/interfaces/UserOperation.sol";
 
-import {IBasePaymaster} from "./../interfaces/base/IBasePaymaster.sol";
-
 /**
  * Helper class for creating a paymaster.
  * provides helper methods for staking.
  * Validates that the postOp is called only by the entryPoint.
  */
-abstract contract BasePaymaster is IBasePaymaster, Ownable {
+abstract contract BasePaymaster is Ownable {
     IEntryPoint public immutable entryPoint;
 
     uint256 internal constant PAYMASTER_VALIDATION_GAS_OFFSET = UserOperationLibV07.PAYMASTER_VALIDATION_GAS_OFFSET;
@@ -34,125 +32,8 @@ abstract contract BasePaymaster is IBasePaymaster, Ownable {
     constructor(
         address _entryPoint
     ) Ownable(msg.sender) {
-        // _validateEntryPointInterface(_entryPoint);
-
         entryPoint = IEntryPoint(_entryPoint);
     }
-
-    // //sanity check: make sure this EntryPoint was compiled against the same
-    // // IEntryPoint of this paymaster
-    // function _validateEntryPointInterface(IEntryPoint _entryPoint) internal virtual {
-    //     require(IERC165(address(_entryPoint)).supportsInterface(type(IEntryPoint).interfaceId), "IEntryPoint interface mismatch");
-    // }
-
-    /// @inheritdoc IBasePaymaster
-    function validatePaymasterUserOp(
-        PackedUserOperation calldata userOp,
-        bytes32 userOpHash,
-        uint256 maxCost
-    ) external override returns (bytes memory context, uint256 validationData) {
-        _requireFromEntryPoint();
-        return _validatePaymasterUserOp(userOp, userOpHash, maxCost);
-    }
-
-    /**
-     * Validate a user operation.
-     * @param userOp     - The user operation.
-     * @param userOpHash - The hash of the user operation.
-     * @param maxCost    - The maximum cost of the user operation.
-     */
-    function _validatePaymasterUserOp(
-        PackedUserOperation calldata userOp,
-        bytes32 userOpHash,
-        uint256 maxCost
-    ) internal virtual returns (bytes memory, uint256) {
-        (userOp, userOpHash, maxCost); // unused params
-        revert("must override");
-    }
-
-    /// @inheritdoc IBasePaymaster
-    function postOp(
-        PostOpMode mode,
-        bytes calldata context,
-        uint256 actualGasCost,
-        uint256 actualUserOpFeePerGas
-    ) external override {
-        _requireFromEntryPoint();
-        _postOp(mode, context, actualGasCost, actualUserOpFeePerGas);
-    }
-
-    /**
-     * Post-operation handler.
-     * (verified to be called only through the entryPoint)
-     * @dev If subclass returns a non-empty context from validatePaymasterUserOp,
-     *      it must also implement this method.
-     * @param mode          - Enum with the following options:
-     *                        opSucceeded - User operation succeeded.
-     *                        opReverted  - User op reverted. The paymaster still has to pay for gas.
-     *                        postOpReverted - never passed in a call to postOp().
-     * @param context       - The context value returned by validatePaymasterUserOp
-     * @param actualGasCost - Actual gas used so far (without this postOp call).
-     * @param actualUserOpFeePerGas - the gas price this UserOp pays. This value is based on the UserOp's maxFeePerGas
-     *                        and maxPriorityFee (and basefee)
-     *                        It is not the same as tx.gasprice, which is what the bundler pays.
-     */
-    function _postOp(
-        PostOpMode mode,
-        bytes calldata context,
-        uint256 actualGasCost,
-        uint256 actualUserOpFeePerGas
-    ) internal virtual {
-        (mode, context, actualGasCost, actualUserOpFeePerGas); // unused params
-        // subclass must override this method if validatePaymasterUserOp returns a context
-        revert("must override");
-    }
-
-
-    // =========== V6 methods ===========
-    /// @inheritdoc IBasePaymaster
-    function validatePaymasterUserOp(UserOperation calldata userOp, bytes32 userOpHash, uint256 maxCost)
-    external override returns (bytes memory context, uint256 validationData) {
-         _requireFromEntryPoint();
-        return _validatePaymasterUserOp(userOp, userOpHash, maxCost);
-    }
-
-    function _validatePaymasterUserOp(
-        UserOperation calldata userOp,
-        bytes32 userOpHash,
-        uint256 maxCost
-    ) internal virtual returns (bytes memory, uint256) {
-        (userOp, userOpHash, maxCost); // unused params
-        revert("must override");
-    }
-
-    /// @inheritdoc IBasePaymaster
-    function postOp(
-        PostOpMode mode,
-        bytes calldata context,
-        uint256 actualGasCost
-    ) external override {
-        _requireFromEntryPoint();
-        _postOp(mode, context, actualGasCost);
-    }
-
-    /**
-     * post-operation handler.
-     * (verified to be called only through the entryPoint)
-     * @dev if subclass returns a non-empty context from validatePaymasterUserOp, it must also implement this method.
-     * @param mode enum with the following options:
-     *      opSucceeded - user operation succeeded.
-     *      opReverted  - user op reverted. still has to pay for gas.
-     *      postOpReverted - user op succeeded, but caused postOp (in mode=opSucceeded) to revert.
-     *                       Now this is the 2nd call, after user's op was deliberately reverted.
-     * @param context - the context value returned by validatePaymasterUserOp
-     * @param actualGasCost - actual gas used so far (without this postOp call).
-     */
-    function _postOp(PostOpMode mode, bytes calldata context, uint256 actualGasCost) internal virtual {
-        (mode,context,actualGasCost); // unused params
-        // subclass must override this method if validatePaymasterUserOp returns a context
-        revert("must override");
-    }
-
 
     /**
      * Add a deposit for this paymaster, used for paying for transaction fees.
