@@ -24,6 +24,6 @@ contract FixedOracle is IOracle {
         uint256 updatedAt,
         uint80 answeredInRound
     ) {
-        return (uint80(0), price, 0, block.timestamp - 1, uint80(0));
+        return (uint80(0), price, 0, block.timestamp, uint80(0));
     }
 }

@@ -91,7 +91,7 @@ contract TwapOracle is IOracle {
         uint256 updatedAt,
         uint80 answeredInRound
     ) {
-        return (0, int256(price), 0, block.timestamp - 1, 0);
+        return (0, int256(price), 0, block.timestamp, 0);
     }
 
     function _fetchTwap() internal view returns (uint256) {
