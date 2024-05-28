@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 import "src/oracles/ManualOracle.sol";
-import "src/factory/PimlicoFactory.sol";
+import "src/factory/ERC20PaymasterFactory.sol";
 
 import "forge-std/Test.sol";
 import "forge-std/console.sol";
@@ -10,18 +10,20 @@ import "forge-std/console.sol";
 
 contract ManualOracleTest is Test {
     address oracleOperator;
-    PimlicoFactory pimlicoFactory;
+    ERC20PaymasterFactory paymasterFactory;
     ManualOracle oracle;
 
     function setUp() external {
         oracleOperator = makeAddr("oracleOperator");
-        pimlicoFactory = new PimlicoFactory();
+        paymasterFactory = new ERC20PaymasterFactory(oracleOperator);
 
-        address _oracle = pimlicoFactory.deployManualOracle(
+        vm.startPrank(oracleOperator);
+        address _oracle = paymasterFactory.deployManualOracle(
             "test-manual-oracle",
             3e8,
             oracleOperator
         );
+        vm.stopPrank();
         oracle = ManualOracle(_oracle);
     }
 

@@ -2,20 +2,24 @@
 pragma solidity ^0.8.0;
 
 import "src/oracles/FixedOracle.sol";
-import "src/factory/PimlicoFactory.sol";
+import "src/factory/ERC20PaymasterFactory.sol";
 
 import "forge-std/Test.sol";
 import "forge-std/console.sol";
 
 
 contract FixedOracleTest is Test {
+    address oracleOperator;
     FixedOracle oracle;
-    PimlicoFactory pimlicoFactory;
+    ERC20PaymasterFactory paymasterFactory;
 
     function setUp() external {
-        pimlicoFactory = new PimlicoFactory();
+        oracleOperator = makeAddr("oracleOperator");
+        paymasterFactory = new ERC20PaymasterFactory(oracleOperator);
 
-        address _oracle = pimlicoFactory.deployFixedOracle(2e3);
+        vm.startPrank(oracleOperator);
+        address _oracle = paymasterFactory.deployFixedOracle(2e3);
+        vm.stopPrank();
         oracle = FixedOracle(_oracle);
     }
 

@@ -3,8 +3,8 @@ pragma solidity ^0.8.0;
 
 import {ERC20PaymasterV07 as ERC20Paymaster} from "src/ERC20PaymasterV07.sol";
 import "src/base/BaseERC20Paymaster.sol";
-import {PimlicoFactory} from "src/factory/PimlicoFactory.sol";
-import {PaymasterVersion} from "src/factory/FactoryPaymaster.sol";
+import {ERC20PaymasterFactory} from "src/factory/ERC20PaymasterFactory.sol";
+import {PaymasterVersion} from "src/factory/PaymasterFactory.sol";
 import "./utils/TestERC20.sol";
 import "./utils/TestOracle.sol";
 import "./utils/TestCounter.sol";
@@ -22,7 +22,7 @@ using ECDSA for bytes32;
 
 contract ERC20Paymaster18Test is Test {
     EntryPoint entryPoint;
-    PimlicoFactory pimlicoFactory;
+    ERC20PaymasterFactory paymasterFactory;
     SimpleAccountFactory accountFactory;
     ERC20Paymaster paymaster;
     TestERC20 token;
@@ -51,8 +51,9 @@ contract ERC20Paymaster18Test is Test {
         nativeAssetOracle.setPrice(2000_00000000);
         accountFactory = new SimpleAccountFactory(entryPoint);
         
-        pimlicoFactory = new PimlicoFactory();
-        address _paymaster = pimlicoFactory.deployPaymaster(
+        paymasterFactory = new ERC20PaymasterFactory(paymasterOperator);
+        vm.startPrank(paymasterOperator);
+        address _paymaster = paymasterFactory.deployPaymaster(
             PaymasterVersion.V07,
             token,
             address(entryPoint),
@@ -65,6 +66,7 @@ contract ERC20Paymaster18Test is Test {
             30000,
             50000
         );
+        vm.stopPrank();
         paymaster = ERC20Paymaster(_paymaster);
 
         account = accountFactory.createAccount(user, 0);

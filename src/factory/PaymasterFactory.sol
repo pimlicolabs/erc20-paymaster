@@ -9,13 +9,15 @@ import {IOracle} from "./../interfaces/oracles/IOracle.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {Create2} from "@openzeppelin-v5.0.0/contracts/utils/Create2.sol";
 
+import "@openzeppelin-v5.0.0/contracts/access/Ownable.sol";
+
 
 enum PaymasterVersion {
     V06,
     V07
 }
 
-contract FactoryPaymaster {
+abstract contract PaymasterFactory is Ownable {
     event DeployedPaymaster(
         PaymasterVersion version,
         address token,
@@ -37,7 +39,7 @@ contract FactoryPaymaster {
         uint32 _priceMarkup,
         uint256 _refundPostOpCost,
         uint256 _refundPostOpCostWithGuarantor
-    ) public returns (address paymaster) {
+    ) public onlyOwner returns (address paymaster) {
         bytes memory bytecode;
         if (_version == PaymasterVersion.V06) {
             bytecode = type(ERC20PaymasterV06).creationCode;
@@ -88,7 +90,7 @@ contract FactoryPaymaster {
         uint32 _priceMarkup,
         uint256 _refundPostOpCost,
         uint256 _refundPostOpCostWithGuarantor
-    ) external {
+    ) external onlyOwner {
         deployPaymaster(
             PaymasterVersion.V06,
             _token,

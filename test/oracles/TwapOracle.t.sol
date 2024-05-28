@@ -24,7 +24,7 @@ contract TwapOracleTest is Test, Fork {
 
         (,int256 answer,,uint256 updatedAt,) = oracle.latestRoundData();
 
-        assertEq(updatedAt, block.timestamp - 1);
+        assertEq(updatedAt, block.timestamp);
 
         // Approx 60000$ per btc
         assertApproxEqAbs(

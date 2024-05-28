@@ -6,9 +6,10 @@ import {ManualOracle} from "./../oracles/ManualOracle.sol";
 import {TwapOracle} from "./../oracles/TwapOracle.sol";
 
 import {Create2} from "@openzeppelin-v5.0.0/contracts/utils/Create2.sol";
+import "@openzeppelin-v5.0.0/contracts/access/Ownable.sol";
 
 
-abstract contract FactoryOracle {
+abstract contract OracleFactory is Ownable {
     event DeployedFixedOracle(
         address oracle,
         int256 price
@@ -29,7 +30,7 @@ abstract contract FactoryOracle {
 
     function deployFixedOracle(
         int256 _price
-    ) external returns (address oracle) {
+    ) external onlyOwner returns (address oracle) {
         bytes memory constructorArgs = abi.encode(_price);
 
         oracle = Create2.deploy(
@@ -51,7 +52,7 @@ abstract contract FactoryOracle {
         string memory _tag,
         int256 _price,
         address _owner
-    ) external returns (address oracle) {
+    ) external onlyOwner returns (address oracle) {
         bytes memory constructorArgs = abi.encode(
             _price,
             _owner
@@ -77,7 +78,7 @@ abstract contract FactoryOracle {
         address _pool,
         uint32 _twapAge,
         address _baseToken
-    ) external returns (address oracle) {
+    ) external onlyOwner returns (address oracle) {
         bytes memory constructorArgs = abi.encode(
             _pool,
             _twapAge,
