@@ -1,19 +1,19 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "src/ERC20Paymaster.sol";
+import {ERC20PaymasterV07 as ERC20Paymaster} from "src/ERC20PaymasterV07.sol";
+import "src/base/BaseERC20Paymaster.sol";
 import "./utils/TestERC20.sol";
 import "./utils/TestOracle.sol";
 import "./utils/TestCounter.sol";
 import "./utils/BytesLib.sol";
-import "@account-abstraction/contracts/core/EntryPoint.sol";
-import "@account-abstraction/contracts/core/EntryPointSimulations.sol";
-import "@account-abstraction/contracts/interfaces/PackedUserOperation.sol";
-import "@account-abstraction/contracts/samples/SimpleAccountFactory.sol";
+import {EntryPoint} from "src/account-abstraction/v07/core/EntryPoint.sol";
+import "@account-abstraction-v7/contracts/interfaces/PackedUserOperation.sol";
+import {SimpleAccountFactory, SimpleAccount} from "src/account-abstraction/v07/samples/SimpleAccountFactory.sol";
 import "forge-std/Test.sol";
 import "forge-std/console.sol";
-import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
+import "@openzeppelin-v5.0.0/contracts/utils/cryptography/ECDSA.sol";
+import "@openzeppelin-v5.0.0/contracts/utils/cryptography/MessageHashUtils.sol";
 
 import {SymTest} from "halmos-cheatcodes/SymTest.sol";
 
@@ -21,7 +21,6 @@ using ECDSA for bytes32;
 
 contract ERC20PaymasterSymbolicTest is SymTest, Test {
     EntryPoint entryPoint;
-    EntryPointSimulations entryPointSimulations;
     SimpleAccountFactory accountFactory;
     ERC20Paymaster paymaster;
     TestERC20 token;
@@ -50,7 +49,6 @@ contract ERC20PaymasterSymbolicTest is SymTest, Test {
         );
 
         entryPoint = new EntryPoint();
-        entryPointSimulations = new EntryPointSimulations();
         token = new TestERC20(18);
         tokenOracle = new TestOracle();
         tokenOracle.setPrice(1_00000000);
@@ -59,7 +57,7 @@ contract ERC20PaymasterSymbolicTest is SymTest, Test {
         accountFactory = new SimpleAccountFactory(entryPoint);
         paymaster = new ERC20Paymaster(
             token,
-            entryPoint,
+            address(entryPoint),
             tokenOracle,
             nativeAssetOracle,
             2 * 24 * 60 * 60,
@@ -86,7 +84,7 @@ contract ERC20PaymasterSymbolicTest is SymTest, Test {
 
         ERC20Paymaster testPaymaster = new ERC20Paymaster(
             token,
-            entryPoint,
+            address(entryPoint),
             tokenOracle,
             nativeAssetOracle,
             2 * 24 * 60 * 60,
@@ -105,7 +103,7 @@ contract ERC20PaymasterSymbolicTest is SymTest, Test {
 
         vm.prank(paymasterOperator);
         (bool success,) =
-            address(testPaymaster).call(abi.encodeWithSelector(ERC20Paymaster.updateMarkup.selector, priceMarkup));
+            address(testPaymaster).call(abi.encodeWithSelector(BaseERC20Paymaster.updateMarkup.selector, priceMarkup));
         if (!success) {
             if (priceMarkup >= testPaymaster.PRICE_DENOMINATOR()) {
                 assert(priceMarkup > priceMarkupLimit);

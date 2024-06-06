@@ -7,7 +7,7 @@ This repository contains an ERC-4337 paymaster implementation allowing users to 
 ## Features
 - ✅ Users paying with ERC-20 tokens for transaction fees
 - ✅ Using guarantors to front gas fees to allow for token approvals during execution
-- ✅ Compatible with EntryPoint v0.7
+- ✅ Compatible with EntryPoint v0.7 and v0.6
 - ✅ Refunding excess tokens based on the actual user operation cost
 - ✅ Using oracles to fetch latest gas prices
 - ✅ Withdrawing accrued tokens by the contract owner
@@ -55,15 +55,45 @@ Foundry is used for unit tests.
 forge install
 ```
 
-2. run tests
+2. set up local environment
+
+```shell
+cp .env.sample .env
+# Fill the envs
+```
+
+3. run tests
 ```shell
 forge test
 ```
 
-3. run coverage
+4. run coverage
 ```shell
 forge coverage --ir-minimum 
 ```
+
+### Oracles
+
+The ERC20 paymaster relies on Chainlink oracles. However, they may be not presented in some networks or may miss some tokens. To face this issue, we have implemented three additional oracles, which are all compliant with Chainlink's oracle interface
+
+#### TWAP oracle
+
+- [src/oracles/TwapOracle.sol](./src/oracles/TwapOracle.sol)
+
+TWAP oracle relies on the TWAP, received from the existing Uniswap V3 pool. The TWAP is fetched for the `uint32 twapAge` seconds, this parameter can't be changed after deployment. The oracle is built around official Uniswap's [OracleLibrary](https://docs.uniswap.org/contracts/v3/reference/periphery/libraries/OracleLibrary) implementation.
+
+#### Manual oracle
+
+- [src/oracles/ManualOracle.sol](./src/oracles/ManualOracle.sol)
+
+Manual oracle returns a fixed price, specified by the owner. The price can be changed an infinite amount of times.
+
+#### Fixed oracle
+
+- [src/oracles/FixedOracle.sol](./src/oracles/FixedOracle.sol)
+
+Fixed oracle returns the fixed price, specified at the time of deploy.
+
 
 ### Halmos
 
