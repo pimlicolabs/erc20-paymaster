@@ -19,7 +19,7 @@ contract ManualOracleTest is Test {
 
         vm.startPrank(oracleOperator);
         address _oracle = paymasterFactory.deployManualOracle(
-            "test-manual-oracle",
+            "0x00",
             3e8,
             oracleOperator
         );

@@ -19,6 +19,7 @@ enum PaymasterVersion {
 
 abstract contract PaymasterFactory is Ownable {
     event DeployedPaymaster(
+        bytes32 salt,
         PaymasterVersion version,
         address token,
         address tokenOracle,
@@ -28,6 +29,7 @@ abstract contract PaymasterFactory is Ownable {
     );
 
     function deployPaymaster(
+        bytes32 salt,
         PaymasterVersion _version,
         IERC20Metadata _token,
         address _entryPoint,
@@ -62,7 +64,7 @@ abstract contract PaymasterFactory is Ownable {
 
         paymaster = Create2.deploy(
             0,
-            keccak256(abi.encode(_version, constructorArgs)),
+            salt,
             abi.encodePacked(
                 bytecode,
                 constructorArgs
@@ -70,6 +72,7 @@ abstract contract PaymasterFactory is Ownable {
         );
 
         emit DeployedPaymaster(
+            salt,
             _version,
             address(_token),
             address(_tokenOracle),
@@ -80,6 +83,7 @@ abstract contract PaymasterFactory is Ownable {
     }
 
     function deployPaymasters(
+        bytes32 salt,
         IERC20Metadata _token,
         address _entryPoint,
         IOracle _tokenOracle,
@@ -92,6 +96,7 @@ abstract contract PaymasterFactory is Ownable {
         uint256 _refundPostOpCostWithGuarantor
     ) external onlyOwner {
         deployPaymaster(
+            salt,
             PaymasterVersion.V06,
             _token,
             _entryPoint,
@@ -106,6 +111,7 @@ abstract contract PaymasterFactory is Ownable {
         );
 
         deployPaymaster(
+            salt,
             PaymasterVersion.V07,
             _token,
             _entryPoint,

@@ -11,17 +11,19 @@ import "@openzeppelin-v5.0.0/contracts/access/Ownable.sol";
 
 abstract contract OracleFactory is Ownable {
     event DeployedFixedOracle(
+        bytes32 salt,
         address oracle,
         int256 price
     );
 
     event DeployedManualOracle(
-        string tag,
+        bytes32 salt,
         address oracle,
         int256 price
     );
 
     event DeployedTwapOracle(
+        bytes32 salt,
         address oracle,
         address pool,
         uint32 twapAge,
@@ -29,13 +31,14 @@ abstract contract OracleFactory is Ownable {
     );
 
     function deployFixedOracle(
+        bytes32 salt,
         int256 _price
     ) external onlyOwner returns (address oracle) {
         bytes memory constructorArgs = abi.encode(_price);
 
         oracle = Create2.deploy(
             0,
-            keccak256(constructorArgs),
+            salt,
             abi.encodePacked(
                 type(FixedOracle).creationCode,
                 constructorArgs
@@ -43,13 +46,14 @@ abstract contract OracleFactory is Ownable {
         );
 
         emit DeployedFixedOracle(
+            salt,
             oracle,
             _price
         );
     }
 
     function deployManualOracle(
-        string memory _tag,
+        bytes32 salt,
         int256 _price,
         address _owner
     ) external onlyOwner returns (address oracle) {
@@ -60,7 +64,7 @@ abstract contract OracleFactory is Ownable {
 
         oracle = Create2.deploy(
             0,
-            keccak256(abi.encode(_tag, constructorArgs)),
+            salt,
             abi.encodePacked(
                 type(ManualOracle).creationCode,
                 constructorArgs
@@ -68,13 +72,14 @@ abstract contract OracleFactory is Ownable {
         );
 
         emit DeployedManualOracle(
-            _tag,
+            salt,
             oracle,
             _price
         );        
     }
 
     function deployTwapOracle(
+        bytes32 salt,
         address _pool,
         uint32 _twapAge,
         address _baseToken
@@ -87,7 +92,7 @@ abstract contract OracleFactory is Ownable {
 
         oracle = Create2.deploy(
             0,
-            keccak256(constructorArgs),
+            salt,
             abi.encodePacked(
                 type(TwapOracle).creationCode,
                 constructorArgs
@@ -95,7 +100,8 @@ abstract contract OracleFactory is Ownable {
         );
 
         emit DeployedTwapOracle(
-            address(oracle),
+            salt,
+            oracle,
             _pool,
             _twapAge,
             _baseToken

@@ -18,7 +18,7 @@ contract FixedOracleTest is Test {
         paymasterFactory = new ERC20PaymasterFactory(oracleOperator);
 
         vm.startPrank(oracleOperator);
-        address _oracle = paymasterFactory.deployFixedOracle(2e3);
+        address _oracle = paymasterFactory.deployFixedOracle("0x00", 2e3);
         vm.stopPrank();
         oracle = FixedOracle(_oracle);
     }

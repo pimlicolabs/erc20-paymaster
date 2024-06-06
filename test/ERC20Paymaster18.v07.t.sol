@@ -54,6 +54,7 @@ contract ERC20Paymaster18Test is Test {
         paymasterFactory = new ERC20PaymasterFactory(paymasterOperator);
         vm.startPrank(paymasterOperator);
         address _paymaster = paymasterFactory.deployPaymaster(
+            "0x00",
             PaymasterVersion.V07,
             token,
             address(entryPoint),
