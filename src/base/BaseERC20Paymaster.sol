@@ -41,6 +41,9 @@ abstract contract BaseERC20Paymaster is BasePaymaster {
     /// @dev The oracle decimals are not set to 8.
     error OracleDecimalsInvalid();
 
+    /// @dev Renouncing ownership is not allowed.
+    error RenounceOwnershipNotAllowed();
+
     /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
     /*                           EVENTS                           */
     /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
@@ -207,5 +210,9 @@ abstract contract BaseERC20Paymaster is BasePaymaster {
             revert OraclePriceStale();
         }
         price = uint192(int192(answer));
+    }
+
+    function renounceOwnership() public view override onlyOwner {
+        revert RenounceOwnershipNotAllowed();
     }
 }

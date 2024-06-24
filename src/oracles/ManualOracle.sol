@@ -12,6 +12,9 @@ contract ManualOracle is IOracle, Ownable {
     /// @dev Invalid price, can't be negative or zero
     error InvalidPrice();
 
+    /// @dev Renouncing ownership is not allowed
+    error RenounceOwnershipNotAllowed();
+
     /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
     /*                           EVENTS                           */
     /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
@@ -24,6 +27,10 @@ contract ManualOracle is IOracle, Ownable {
 
     /// @dev Current price, can be updated by the owner
     int256 public price;
+
+    function renounceOwnership() public view override onlyOwner {
+        revert RenounceOwnershipNotAllowed();
+    }
 
     constructor(
         int256 _price,
