@@ -13,7 +13,7 @@ import "./utils/BytesLib.sol";
 import {EntryPoint} from "src/account-abstraction/v06/core/EntryPoint.sol";
 import {SimpleAccountFactory, SimpleAccount} from "src/account-abstraction/v06/samples/SimpleAccountFactory.sol";
 import {UserOperationLib, UserOperation} from "@account-abstraction-v6/contracts/interfaces/UserOperation.sol";
-import "@openzeppelin-v4.8.0/contracts/utils/cryptography/ECDSA.sol";
+import {ECDSA} from "@openzeppelin-v4.8.0/contracts/utils/cryptography/ECDSA.sol";
 
 import "forge-std/Test.sol";
 import "forge-std/console.sol";

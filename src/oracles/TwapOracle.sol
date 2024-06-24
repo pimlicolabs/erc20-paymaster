@@ -3,6 +3,8 @@ pragma solidity 0.8.23;
 
 import {IOracle} from "./../interfaces/oracles/IOracle.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
+
 import {OracleLibrary} from "@v3-periphery/contracts/libraries/OracleLibrary.sol";
 import {IUniswapV3PoolImmutables} from "@uniswap/v3-core/contracts/interfaces/pool/IUniswapV3PoolImmutables.sol";
 
@@ -78,8 +80,12 @@ contract TwapOracle is IOracle {
     ) {
         uint256 _price = _fetchTwap();
 
-        // Normalize the price to the oracle decimals
-        uint256 price = _price * ORACLE_DECIMALS / quoteTokenDecimals;
+        uint256 price = Math.mulDiv(
+            _price,
+            ORACLE_DECIMALS,
+            quoteTokenDecimals,
+            Math.Rounding.Ceil
+        );
 
         return _buildLatestRoundData(price);
     }

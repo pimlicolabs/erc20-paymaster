@@ -8,6 +8,7 @@ import {_packValidationData} from "@account-abstraction-v6/contracts/core/Helper
 
 import {SignatureChecker} from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
 import {IERC20Metadata, IERC20} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 import {SafeTransferLib} from "./utils/SafeTransferLib.sol";
 import {BaseERC20Paymaster} from "./base/BaseERC20Paymaster.sol";
@@ -91,11 +92,19 @@ contract ERC20PaymasterV06 is BaseERC20Paymaster, IPaymaster {
         {
             uint256 maxFeePerGas = userOp.maxFeePerGas;
             if (mode == 0 || mode == 1) {
-                tokenAmount = (maxCost + (refundPostOpCost) * maxFeePerGas) * priceMarkup * tokenPrice
-                    / (1e18 * PRICE_DENOMINATOR);
+                tokenAmount = Math.mulDiv(
+                    (maxCost + (refundPostOpCost) * maxFeePerGas) * priceMarkup,
+                    tokenPrice,
+                    1e18 * PRICE_DENOMINATOR,
+                    Math.Rounding.Ceil
+                );
             } else {
-                tokenAmount = (maxCost + (refundPostOpCostWithGuarantor) * maxFeePerGas) * priceMarkup * tokenPrice
-                    / (1e18 * PRICE_DENOMINATOR);
+                tokenAmount = Math.mulDiv(
+                    (maxCost + (refundPostOpCostWithGuarantor) * maxFeePerGas) * priceMarkup,
+                    tokenPrice,
+                    1e18 * PRICE_DENOMINATOR,
+                    Math.Rounding.Ceil
+                );
             }
         }
 
@@ -185,8 +194,12 @@ contract ERC20PaymasterV06 is BaseERC20Paymaster, IPaymaster {
 
         if (context.length == 160) {
             // A guarantor is used
-            uint256 actualTokenNeeded = (actualGasCost + refundPostOpCostWithGuarantor * gasPrice)
-                * priceMarkup * tokenPrice / (1e18 * PRICE_DENOMINATOR);
+            uint256 actualTokenNeeded = Math.mulDiv(
+                (actualGasCost + (refundPostOpCostWithGuarantor) * gasPrice) * priceMarkup,
+                tokenPrice,
+                1e18 * PRICE_DENOMINATOR,
+                Math.Rounding.Ceil
+            );
             address guarantor = address(bytes20(context[140:160]));
 
             bool success = SafeTransferLib.trySafeTransferFrom(address(token), sender, address(this), actualTokenNeeded);
@@ -200,8 +213,12 @@ contract ERC20PaymasterV06 is BaseERC20Paymaster, IPaymaster {
                 emit UserOperationSponsored(userOpHash, sender, guarantor, actualTokenNeeded, tokenPrice, true);
             }
         } else {
-            uint256 actualTokenNeeded = (actualGasCost + refundPostOpCost * gasPrice) * priceMarkup
-                * tokenPrice / (1e18 * PRICE_DENOMINATOR);
+            uint256 actualTokenNeeded = Math.mulDiv(
+                (actualGasCost + (refundPostOpCost) * gasPrice) * priceMarkup,
+                tokenPrice,
+                1e18 * PRICE_DENOMINATOR,
+                Math.Rounding.Ceil
+            );
 
             SafeTransferLib.safeTransfer(address(token), sender, prefundTokenAmount - actualTokenNeeded);
             emit UserOperationSponsored(userOpHash, sender, address(0), actualTokenNeeded, tokenPrice, false);

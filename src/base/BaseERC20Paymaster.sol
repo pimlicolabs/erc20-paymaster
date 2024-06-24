@@ -4,6 +4,7 @@ pragma solidity ^0.8.23;
 import "./BasePaymaster.sol";
 
 import {IERC20Metadata, IERC20} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 import {SafeTransferLib} from "./../utils/SafeTransferLib.sol";
 import {IOracle} from "./../interfaces/oracles/IOracle.sol";
@@ -181,11 +182,14 @@ abstract contract BaseERC20Paymaster is BasePaymaster {
     /// @notice Fetches the latest token price.
     /// @return price The latest token price fetched from the oracles.
     function getPrice() public view returns (uint192) {
-        uint192 tokenPrice = _fetchPrice(tokenOracle);
-        uint192 nativeAssetPrice = _fetchPrice(nativeAssetOracle);
-        uint192 price = nativeAssetPrice * uint192(tokenDecimals) / tokenPrice;
+        uint256 price = Math.mulDiv(
+            uint256(_fetchPrice(nativeAssetOracle)),
+            tokenDecimals,
+            uint256(_fetchPrice(tokenOracle)),
+            Math.Rounding.Ceil
+        );
 
-        return price;
+        return uint192(price);
     }
 
     /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
