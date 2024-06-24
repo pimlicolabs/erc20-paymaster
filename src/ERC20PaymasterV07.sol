@@ -235,6 +235,21 @@ contract ERC20PaymasterV07 is BaseERC20Paymaster, IPaymaster {
     }
 
     /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+    /*                      INTERNAL HELPERS                      */
+    /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
+    /// @notice Parses the paymasterAndData field of the user operation and returns the paymaster mode and data.
+    /// @param _paymasterAndData The paymasterAndData field of the user operation.
+    /// @return mode The paymaster mode.
+    /// @return paymasterConfig The paymaster configuration data.
+    function _parsePaymasterAndData(bytes calldata _paymasterAndData) internal pure override returns (uint8, bytes calldata) {
+        if (_paymasterAndData.length < 53) {
+            return (0, msg.data[0:0]);
+        }
+        return (uint8(_paymasterAndData[52]), _paymasterAndData[53:]);
+    }
+
+    /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
     /*                      PUBLIC HELPERS                        */
     /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 

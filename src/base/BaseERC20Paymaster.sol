@@ -200,12 +200,7 @@ abstract contract BaseERC20Paymaster is BasePaymaster {
     /// @param _paymasterAndData The paymasterAndData field of the user operation.
     /// @return mode The paymaster mode.
     /// @return paymasterConfig The paymaster configuration data.
-    function _parsePaymasterAndData(bytes calldata _paymasterAndData) internal pure returns (uint8, bytes calldata) {
-        if (_paymasterAndData.length < 53) {
-            return (0, msg.data[0:0]);
-        }
-        return (uint8(_paymasterAndData[52]), _paymasterAndData[53:]);
-    }
+    function _parsePaymasterAndData(bytes calldata _paymasterAndData) internal virtual pure returns (uint8, bytes calldata);
 
     /// @notice Fetches the latest price from the given oracle.
     /// @dev This function is used to get the latest price from the tokenOracle or nativeAssetOracle.

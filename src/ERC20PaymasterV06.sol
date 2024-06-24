@@ -225,6 +225,21 @@ contract ERC20PaymasterV06 is BaseERC20Paymaster, IPaymaster {
         }
     }
 
+    /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+    /*                      INTERNAL HELPERS                      */
+    /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
+    /// @notice Parses the paymasterAndData field of the user operation and returns the paymaster mode and data.
+    /// @param _paymasterAndData The paymasterAndData field of the user operation.
+    /// @return mode The paymaster mode.
+    /// @return paymasterConfig The paymaster configuration data.
+    function _parsePaymasterAndData(bytes calldata _paymasterAndData) internal pure override returns (uint8, bytes calldata) {
+        if (_paymasterAndData.length < 21) {
+            return (0, msg.data[0:0]);
+        }
+        return (uint8(_paymasterAndData[20]), _paymasterAndData[21:]);
+    }
+
     function getUserOpGasPrice(UserOperation calldata userOp) internal view returns (uint256) {
         unchecked {
             uint256 maxFeePerGas = userOp.maxFeePerGas;
@@ -262,7 +277,6 @@ contract ERC20PaymasterV06 is BaseERC20Paymaster, IPaymaster {
                 userOp.preVerificationGas,
                 userOp.maxFeePerGas,
                 userOp.maxPriorityFeePerGas,
-                uint256(bytes32(userOp.paymasterAndData[PAYMASTER_VALIDATION_GAS_OFFSET:PAYMASTER_DATA_OFFSET])),
                 block.chainid,
                 address(this),
                 validUntil,

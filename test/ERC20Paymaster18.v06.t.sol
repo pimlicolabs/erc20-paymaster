@@ -175,13 +175,11 @@ contract ERC20Paymaster18Test is Test {
 
         uint256 verificationGasLimit = op.verificationGasLimit;
         uint256 callGasLimit = op.callGasLimit;
-        uint256 paymasterVerificationGasLimit = uint256(uint128(bytes16(BytesLib.slice(op.paymasterAndData, 20, 16))));
-        uint256 postOpGasLimit = uint256(uint128(bytes16(BytesLib.slice(op.paymasterAndData, 36, 16))));
         uint256 preVerificationGas = op.preVerificationGas;
         uint256 maxFeePerGas = uint256(uint128(uint256(op.maxFeePerGas)));
 
         uint256 requiredGas =
-            verificationGasLimit + callGasLimit + paymasterVerificationGasLimit + postOpGasLimit + preVerificationGas;
+            verificationGasLimit + callGasLimit + preVerificationGas;
         requiredPrefund = requiredGas * maxFeePerGas * mul;
     }
 
@@ -192,7 +190,7 @@ contract ERC20Paymaster18Test is Test {
         token.sudoApprove(address(account), address(paymaster), 1000e18);
         UserOperation memory op =
             fillUserOp(account, userKey, address(counter), 0, abi.encodeWithSelector(TestCounter.count.selector));
-        op.paymasterAndData = abi.encodePacked(address(paymaster), uint128(100000), uint128(100000));
+        op.paymasterAndData = abi.encodePacked(address(paymaster));
         op.signature = signUserOp(op, userKey);
         submitUserOp(op);
     }
@@ -205,12 +203,12 @@ contract ERC20Paymaster18Test is Test {
         UserOperation memory op =
             fillUserOp(account, userKey, address(counter), 0, abi.encodeWithSelector(TestCounter.count.selector));
 
-        op.paymasterAndData = abi.encodePacked(address(paymaster), uint128(100000), uint128(50000));
+        op.paymasterAndData = abi.encodePacked(address(paymaster));
         uint256 maxFeePerGas = uint256(uint128(uint256(op.maxFeePerGas)));
         uint256 limit = (getRequiredPrefund(op) + (paymaster.refundPostOpCost() * maxFeePerGas))
             * paymaster.priceMarkup() * paymaster.getPrice() / (1e18 * paymaster.PRICE_DENOMINATOR());
         
-        op.paymasterAndData = abi.encodePacked(address(paymaster), uint128(100000), uint128(50000), hex"01", limit);
+        op.paymasterAndData = abi.encodePacked(address(paymaster), hex"01", limit);
         op.signature = signUserOp(op, userKey);
         submitUserOp(op);
     }
@@ -223,13 +221,13 @@ contract ERC20Paymaster18Test is Test {
         UserOperation memory op =
             fillUserOp(account, userKey, address(counter), 0, abi.encodeWithSelector(TestCounter.count.selector));
 
-        op.paymasterAndData = abi.encodePacked(address(paymaster), uint128(100000), uint128(50000));
+        op.paymasterAndData = abi.encodePacked(address(paymaster));
         uint256 maxFeePerGas = uint256(uint128(uint256(op.maxFeePerGas)));
         uint256 limit = (getRequiredPrefund(op) + (paymaster.refundPostOpCost() * maxFeePerGas))
             * paymaster.priceMarkup() * paymaster.getPrice() / (1e18 * paymaster.PRICE_DENOMINATOR());
 
         op.paymasterAndData =
-            abi.encodePacked(address(paymaster), uint128(100000), uint128(50000), hex"01", limit, hex"69");
+            abi.encodePacked(address(paymaster), hex"01", limit, hex"69");
         op.signature = signUserOp(op, userKey);
         vm.expectRevert(
             abi.encodeWithSelector(
@@ -249,12 +247,12 @@ contract ERC20Paymaster18Test is Test {
         UserOperation memory op =
             fillUserOp(account, userKey, address(counter), 0, abi.encodeWithSelector(TestCounter.count.selector));
 
-        op.paymasterAndData = abi.encodePacked(address(paymaster), uint128(100000), uint128(50000));
+        op.paymasterAndData = abi.encodePacked(address(paymaster));
         uint256 maxFeePerGas = uint256(uint128(uint256(op.maxFeePerGas)));
         uint256 limit = ((getRequiredPrefund(op) + (paymaster.refundPostOpCost() * maxFeePerGas))
             * paymaster.priceMarkup() * paymaster.getPrice() / (1e18 * paymaster.PRICE_DENOMINATOR())) / 4;
 
-        op.paymasterAndData = abi.encodePacked(address(paymaster), uint128(100000), uint128(50000), hex"01", limit);
+        op.paymasterAndData = abi.encodePacked(address(paymaster), hex"01", limit);
         op.signature = signUserOp(op, userKey);
         vm.expectRevert(
             abi.encodeWithSelector(
@@ -274,10 +272,10 @@ contract ERC20Paymaster18Test is Test {
         UserOperation memory op =
             fillUserOp(account, userKey, address(counter), 0, abi.encodeWithSelector(TestCounter.count.selector));
 
-        op.paymasterAndData = abi.encodePacked(address(paymaster), uint128(100000), uint128(50000));
+        op.paymasterAndData = abi.encodePacked(address(paymaster));
         uint256 limit = 0;
 
-        op.paymasterAndData = abi.encodePacked(address(paymaster), uint128(100000), uint128(50000), hex"01", limit);
+        op.paymasterAndData = abi.encodePacked(address(paymaster), hex"01", limit);
         op.signature = signUserOp(op, userKey);
         vm.expectRevert(
             abi.encodeWithSelector(
@@ -299,7 +297,7 @@ contract ERC20Paymaster18Test is Test {
             account, userKey, address(token), 0, abi.encodeWithSelector(ERC20.approve.selector, paymaster, 1000e18)
         );
 
-        op.paymasterAndData = abi.encodePacked(address(paymaster), uint128(100000), uint128(50000));
+        op.paymasterAndData = abi.encodePacked(address(paymaster));
 
         uint48 validUntil = 0;
         uint48 validAfter = 0;
@@ -309,8 +307,6 @@ contract ERC20Paymaster18Test is Test {
 
         op.paymasterAndData = abi.encodePacked(
             address(paymaster),
-            uint128(100000),
-            uint128(50000),
             hex"02",
             guarantor,
             validUntil,
@@ -334,7 +330,7 @@ contract ERC20Paymaster18Test is Test {
             account, userKey, address(token), 0, abi.encodeWithSelector(ERC20.approve.selector, paymaster, 1000e18)
         );
 
-        op.paymasterAndData = abi.encodePacked(address(paymaster), uint128(100000), uint128(50000));
+        op.paymasterAndData = abi.encodePacked(address(paymaster));
 
         uint48 validUntil = 0;
         uint48 validAfter = 0;
@@ -344,8 +340,6 @@ contract ERC20Paymaster18Test is Test {
 
         op.paymasterAndData = abi.encodePacked(
             address(paymaster),
-            uint128(100000),
-            uint128(50000),
             hex"02",
             guarantor,
             validUntil,
@@ -371,7 +365,7 @@ contract ERC20Paymaster18Test is Test {
             account, userKey, address(token), 0, abi.encodeWithSelector(ERC20.approve.selector, paymaster, 1000e18)
         );
 
-        op.paymasterAndData = abi.encodePacked(address(paymaster), uint128(100000), uint128(50000), hex"02", hex"69");
+        op.paymasterAndData = abi.encodePacked(address(paymaster), hex"02", hex"69");
         op.signature = signUserOp(op, userKey);
         vm.expectRevert(
             abi.encodeWithSelector(
@@ -392,7 +386,7 @@ contract ERC20Paymaster18Test is Test {
         UserOperation memory op =
             fillUserOp(account, userKey, address(counter), 0, abi.encodeWithSelector(TestCounter.count.selector));
 
-        op.paymasterAndData = abi.encodePacked(address(paymaster), uint128(100000), uint128(50000));
+        op.paymasterAndData = abi.encodePacked(address(paymaster));
 
         uint48 validUntil = 0;
         uint48 validAfter = 0;
@@ -402,8 +396,6 @@ contract ERC20Paymaster18Test is Test {
 
         op.paymasterAndData = abi.encodePacked(
             address(paymaster),
-            uint128(100000),
-            uint128(50000),
             hex"02",
             guarantor,
             validUntil,
@@ -427,7 +419,7 @@ contract ERC20Paymaster18Test is Test {
             account, userKey, address(token), 0, abi.encodeWithSelector(ERC20.approve.selector, paymaster, 1000e18)
         );
 
-        op.paymasterAndData = abi.encodePacked(address(paymaster), uint128(100000), uint128(50000));
+        op.paymasterAndData = abi.encodePacked(address(paymaster));
         uint256 maxFeePerGas = uint256(uint128(uint256(op.maxFeePerGas)));
         uint256 limit = (getRequiredPrefund(op) + (paymaster.refundPostOpCostWithGuarantor() * maxFeePerGas))
             * paymaster.priceMarkup() * paymaster.getPrice() / (1e18 * paymaster.PRICE_DENOMINATOR());
@@ -440,8 +432,6 @@ contract ERC20Paymaster18Test is Test {
 
         op.paymasterAndData = abi.encodePacked(
             address(paymaster),
-            uint128(100000),
-            uint128(50000),
             hex"03",
             limit,
             guarantor,
@@ -463,7 +453,7 @@ contract ERC20Paymaster18Test is Test {
             account, userKey, address(token), 0, abi.encodeWithSelector(ERC20.approve.selector, paymaster, 1000e18)
         );
 
-        op.paymasterAndData = abi.encodePacked(address(paymaster), uint128(100000), uint128(50000), hex"03", hex"69");
+        op.paymasterAndData = abi.encodePacked(address(paymaster), hex"03", hex"69");
         op.signature = signUserOp(op, userKey);
         vm.expectRevert(
             abi.encodeWithSelector(
@@ -485,7 +475,7 @@ contract ERC20Paymaster18Test is Test {
             account, userKey, address(token), 0, abi.encodeWithSelector(ERC20.approve.selector, paymaster, 1000e18)
         );
 
-        op.paymasterAndData = abi.encodePacked(address(paymaster), uint128(100000), uint128(50000));
+        op.paymasterAndData = abi.encodePacked(address(paymaster));
         uint256 maxFeePerGas = uint256(uint128(uint256(op.maxFeePerGas)));
         uint256 limit = ((getRequiredPrefund(op) + (paymaster.refundPostOpCost() * maxFeePerGas))
             * paymaster.priceMarkup() * paymaster.getPrice() / (1e18 * paymaster.PRICE_DENOMINATOR())) / 4;
@@ -494,7 +484,7 @@ contract ERC20Paymaster18Test is Test {
         bytes memory guarantorSig = abi.encodePacked(r, s, v);
 
         op.paymasterAndData = abi.encodePacked(
-            address(paymaster), uint128(100000), uint128(50000), hex"03", limit, guarantor, guarantorSig
+            address(paymaster), hex"03", limit, guarantor, guarantorSig
         );
         op.signature = signUserOp(op, userKey);
         vm.expectRevert(
@@ -517,14 +507,14 @@ contract ERC20Paymaster18Test is Test {
             account, userKey, address(token), 0, abi.encodeWithSelector(ERC20.approve.selector, paymaster, 1000e18)
         );
 
-        op.paymasterAndData = abi.encodePacked(address(paymaster), uint128(100000), uint128(50000));
+        op.paymasterAndData = abi.encodePacked(address(paymaster));
         uint256 limit = 0;
 
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(guarantorKey, paymaster.getHash(op, 0, 0, limit));
         bytes memory guarantorSig = abi.encodePacked(r, s, v);
 
         op.paymasterAndData = abi.encodePacked(
-            address(paymaster), uint128(100000), uint128(50000), hex"03", limit, guarantor, guarantorSig
+            address(paymaster), hex"03", limit, guarantor, guarantorSig
         );
         op.signature = signUserOp(op, userKey);
         vm.expectRevert(
@@ -547,7 +537,7 @@ contract ERC20Paymaster18Test is Test {
             account, userKey, address(token), 0, abi.encodeWithSelector(ERC20.approve.selector, paymaster, 1000e18)
         );
 
-        op.paymasterAndData = abi.encodePacked(address(paymaster), uint128(100000), uint128(50000));
+        op.paymasterAndData = abi.encodePacked(address(paymaster));
         uint256 maxFeePerGas = uint256(uint128(uint256(op.maxFeePerGas)));
         uint256 limit = (getRequiredPrefund(op) + (paymaster.refundPostOpCostWithGuarantor() * maxFeePerGas))
             * paymaster.priceMarkup() * paymaster.getPrice() / (1e18 * paymaster.PRICE_DENOMINATOR());
@@ -560,8 +550,6 @@ contract ERC20Paymaster18Test is Test {
 
         op.paymasterAndData = abi.encodePacked(
             address(paymaster),
-            uint128(100000),
-            uint128(50000),
             hex"03",
             limit,
             guarantor,
@@ -586,7 +574,7 @@ contract ERC20Paymaster18Test is Test {
         UserOperation memory op =
             fillUserOp(account, userKey, address(counter), 0, abi.encodeWithSelector(TestCounter.count.selector));
         op.paymasterAndData =
-            abi.encodePacked(address(paymaster), bytes16(uint128(50000)), bytes16(uint128(50000)), hex"04");
+            abi.encodePacked(address(paymaster), hex"04");
         op.signature = signUserOp(op, userKey);
         vm.expectRevert(
             abi.encodeWithSelector(
