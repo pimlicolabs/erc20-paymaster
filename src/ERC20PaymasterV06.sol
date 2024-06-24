@@ -109,6 +109,10 @@ contract ERC20PaymasterV06 is BaseERC20Paymaster, IPaymaster {
         }
 
         if (mode == 0) {
+            if (paymasterConfig.length != 0) {
+                revert PaymasterDataLengthInvalid();
+            }
+
             SafeTransferLib.safeTransferFrom(address(token), userOp.sender, address(this), tokenAmount);
             context = abi.encodePacked(tokenAmount, tokenPrice, userOp.sender, userOpHash, getUserOpGasPrice(userOp));
             validationResult = 0;
