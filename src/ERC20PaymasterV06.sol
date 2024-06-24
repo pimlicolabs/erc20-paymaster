@@ -101,7 +101,7 @@ contract ERC20PaymasterV06 is BaseERC20Paymaster, IPaymaster {
 
         if (mode == 0) {
             SafeTransferLib.safeTransferFrom(address(token), userOp.sender, address(this), tokenAmount);
-            context = abi.encodePacked(tokenAmount, tokenPrice, userOp.sender, userOpHash);
+            context = abi.encodePacked(tokenAmount, tokenPrice, userOp.sender, userOpHash, getUserOpGasPrice(userOp));
             validationResult = 0;
         } else if (mode == 1) {
             if (paymasterConfig.length != 32) {
@@ -114,7 +114,7 @@ contract ERC20PaymasterV06 is BaseERC20Paymaster, IPaymaster {
                 revert TokenAmountTooHigh();
             }
             SafeTransferLib.safeTransferFrom(address(token), userOp.sender, address(this), tokenAmount);
-            context = abi.encodePacked(tokenAmount, tokenPrice, userOp.sender, userOpHash);
+            context = abi.encodePacked(tokenAmount, tokenPrice, userOp.sender, userOpHash, getUserOpGasPrice(userOp));
             validationResult = 0;
         } else if (mode == 2) {
             if (paymasterConfig.length < 32) {
@@ -130,7 +130,7 @@ contract ERC20PaymasterV06 is BaseERC20Paymaster, IPaymaster {
             );
 
             SafeTransferLib.safeTransferFrom(address(token), guarantor, address(this), tokenAmount);
-            context = abi.encodePacked(tokenAmount, tokenPrice, userOp.sender, userOpHash, guarantor);
+            context = abi.encodePacked(tokenAmount, tokenPrice, userOp.sender, userOpHash, getUserOpGasPrice(userOp), guarantor);
             validationResult = _packValidationData(
                 !signatureValid, uint48(bytes6(paymasterConfig[20:26])), uint48(bytes6(paymasterConfig[26:32]))
             );
@@ -160,7 +160,7 @@ contract ERC20PaymasterV06 is BaseERC20Paymaster, IPaymaster {
             );
 
             SafeTransferLib.safeTransferFrom(address(token), guarantor, address(this), tokenAmount);
-            context = abi.encodePacked(tokenAmount, tokenPrice, userOp.sender, userOpHash, guarantor);
+            context = abi.encodePacked(tokenAmount, tokenPrice, userOp.sender, userOpHash, getUserOpGasPrice(userOp), guarantor);
             validationResult = _packValidationData(
                 !signatureValid, uint48(bytes6(paymasterConfig[52:58])), uint48(bytes6(paymasterConfig[58:64]))
             );
@@ -181,12 +181,13 @@ contract ERC20PaymasterV06 is BaseERC20Paymaster, IPaymaster {
         uint192 tokenPrice = uint192(bytes24(context[32:56]));
         address sender = address(bytes20(context[56:76]));
         bytes32 userOpHash = bytes32(context[76:108]);
+        uint256 gasPrice = uint256(bytes32(context[108:140]));
 
-        if (context.length == 128) {
+        if (context.length == 160) {
             // A guarantor is used
-            uint256 actualTokenNeeded = (actualGasCost + refundPostOpCostWithGuarantor)
+            uint256 actualTokenNeeded = (actualGasCost + refundPostOpCostWithGuarantor * gasPrice)
                 * priceMarkup * tokenPrice / (1e18 * PRICE_DENOMINATOR);
-            address guarantor = address(bytes20(context[108:128]));
+            address guarantor = address(bytes20(context[140:160]));
 
             bool success = SafeTransferLib.trySafeTransferFrom(address(token), sender, address(this), actualTokenNeeded);
             if (success) {
@@ -199,12 +200,28 @@ contract ERC20PaymasterV06 is BaseERC20Paymaster, IPaymaster {
                 emit UserOperationSponsored(userOpHash, sender, guarantor, actualTokenNeeded, tokenPrice, true);
             }
         } else {
-            uint256 actualTokenNeeded = (actualGasCost + refundPostOpCost) * priceMarkup
+            uint256 actualTokenNeeded = (actualGasCost + refundPostOpCost * gasPrice) * priceMarkup
                 * tokenPrice / (1e18 * PRICE_DENOMINATOR);
 
             SafeTransferLib.safeTransfer(address(token), sender, prefundTokenAmount - actualTokenNeeded);
             emit UserOperationSponsored(userOpHash, sender, address(0), actualTokenNeeded, tokenPrice, false);
         }
+    }
+
+    function getUserOpGasPrice(UserOperation calldata userOp) internal view returns (uint256) {
+        unchecked {
+            uint256 maxFeePerGas = userOp.maxFeePerGas;
+            uint256 maxPriorityFeePerGas = userOp.maxPriorityFeePerGas;
+            if (maxFeePerGas == maxPriorityFeePerGas) {
+                //legacy mode (for networks that don't support basefee opcode)
+                return maxFeePerGas;
+            }
+            return min(maxFeePerGas, maxPriorityFeePerGas + block.basefee);
+        }
+    }
+
+    function min(uint256 a, uint256 b) internal pure returns (uint256) {
+        return a < b ? a : b;
     }
 
     /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
