@@ -4,7 +4,7 @@ pragma solidity 0.8.23;
 
 import {IEntryPoint} from "@account-abstraction-v6/contracts/interfaces/IEntryPoint.sol";
 import {UserOperationLib, UserOperation} from "@account-abstraction-v6/contracts/interfaces/UserOperation.sol";
-import {_packValidationData} from "@account-abstraction-v6/contracts/core/Helpers.sol";
+import {_packValidationData, calldataKeccak} from "@account-abstraction-v6/contracts/core/Helpers.sol";
 
 import {SignatureChecker} from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
 import {IERC20Metadata, IERC20} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
@@ -120,10 +120,11 @@ contract ERC20PaymasterV06 is BaseERC20Paymaster, IPaymaster {
             if (paymasterConfig.length != 32) {
                 revert PaymasterDataLengthInvalid();
             }
-            if (uint256(bytes32(paymasterConfig[0:32])) == 0) {
+            uint256 tokenLimit = uint256(bytes32(paymasterConfig[0:32]));
+            if (tokenLimit == 0) {
                 revert TokenLimitZero();
             }
-            if (tokenAmount > uint256(bytes32(paymasterConfig[0:32]))) {
+            if (tokenAmount > tokenLimit) {
                 revert TokenAmountTooHigh();
             }
             SafeTransferLib.safeTransferFrom(address(token), userOp.sender, address(this), tokenAmount);
@@ -152,12 +153,13 @@ contract ERC20PaymasterV06 is BaseERC20Paymaster, IPaymaster {
                 revert PaymasterDataLengthInvalid();
             }
 
+            uint256 tokenLimit = uint256(bytes32(paymasterConfig[0:32]));
             address guarantor = address(bytes20(paymasterConfig[32:52]));
 
-            if (uint256(bytes32(paymasterConfig[0:32])) == 0) {
+            if (tokenLimit == 0) {
                 revert TokenLimitZero();
             }
-            if (tokenAmount > uint256(bytes32(paymasterConfig[0:32]))) {
+            if (tokenAmount > tokenLimit) {
                 revert TokenAmountTooHigh();
             }
 
@@ -167,7 +169,7 @@ contract ERC20PaymasterV06 is BaseERC20Paymaster, IPaymaster {
                     userOp,
                     uint48(bytes6(paymasterConfig[52:58])),
                     uint48(bytes6(paymasterConfig[58:64])),
-                    uint256(bytes32(paymasterConfig[0:32]))
+                    tokenLimit
                 ),
                 paymasterConfig[64:]
             );
@@ -274,8 +276,8 @@ contract ERC20PaymasterV06 is BaseERC20Paymaster, IPaymaster {
             abi.encode(
                 userOp.sender,
                 userOp.nonce,
-                keccak256(userOp.initCode),
-                keccak256(userOp.callData),
+                calldataKeccak(userOp.initCode),
+                calldataKeccak(userOp.callData),
                 userOp.callGasLimit,
                 userOp.verificationGasLimit,
                 userOp.preVerificationGas,

@@ -2,7 +2,7 @@
 pragma solidity 0.8.23;
 
 import {IEntryPoint} from "@account-abstraction-v7/contracts/interfaces/IEntryPoint.sol";
-import {_packValidationData} from "@account-abstraction-v7/contracts/core/Helpers.sol";
+import {_packValidationData, calldataKeccak} from "@account-abstraction-v7/contracts/core/Helpers.sol";
 import {UserOperationLib} from "@account-abstraction-v7/contracts/core/UserOperationLib.sol";
 import {PackedUserOperation} from "@account-abstraction-v7/contracts/interfaces/PackedUserOperation.sol";
 
@@ -272,8 +272,8 @@ contract ERC20PaymasterV07 is BaseERC20Paymaster, IPaymaster {
             abi.encode(
                 sender,
                 userOp.nonce,
-                keccak256(userOp.initCode),
-                keccak256(userOp.callData),
+                calldataKeccak(userOp.initCode),
+                calldataKeccak(userOp.callData),
                 userOp.accountGasLimits,
                 uint256(bytes32(userOp.paymasterAndData[PAYMASTER_VALIDATION_GAS_OFFSET:PAYMASTER_DATA_OFFSET])),
                 userOp.preVerificationGas,
