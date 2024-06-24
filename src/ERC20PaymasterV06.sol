@@ -138,7 +138,7 @@ contract ERC20PaymasterV06 is BaseERC20Paymaster, IPaymaster {
 
             bool signatureValid = SignatureChecker.isValidSignatureNow(
                 guarantor,
-                getHash(userOp, uint48(bytes6(paymasterConfig[20:26])), uint48(bytes6(paymasterConfig[26:32])), 0),
+                getHash(userOp, uint48(bytes6(paymasterConfig[20:26])), uint48(bytes6(paymasterConfig[26:32])), type(uint256).max),
                 paymasterConfig[32:]
             );
 
