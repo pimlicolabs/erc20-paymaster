@@ -213,17 +213,25 @@ contract ERC20PaymasterV07 is BaseERC20Paymaster, IPaymaster {
                 1e18 * PRICE_DENOMINATOR,
                 Math.Rounding.Ceil
             );
+
+            uint256 penalty = Math.mulDiv(
+                prefundTokenAmount - actualTokenNeeded,
+                110,
+                100,
+                Math.Rounding.Ceil
+            );
+
             address guarantor = address(bytes20(context[108:128]));
 
-            bool success = SafeTransferLib.trySafeTransferFrom(address(token), sender, address(this), actualTokenNeeded);
+            bool success = SafeTransferLib.trySafeTransferFrom(address(token), sender, address(this), actualTokenNeeded + penalty);
             if (success) {
                 // If the token transfer is successful, transfer the held tokens back to the guarantor
                 SafeTransferLib.safeTransfer(address(token), guarantor, prefundTokenAmount);
-                emit UserOperationSponsored(userOpHash, sender, guarantor, actualTokenNeeded, tokenPrice, false);
+                emit UserOperationSponsored(userOpHash, sender, guarantor, actualTokenNeeded + penalty, tokenPrice, false);
             } else {
                 // If the token transfer fails, the guarantor is deemed responsible for the token payment
-                SafeTransferLib.safeTransfer(address(token), guarantor, prefundTokenAmount - actualTokenNeeded);
-                emit UserOperationSponsored(userOpHash, sender, guarantor, actualTokenNeeded, tokenPrice, true);
+                SafeTransferLib.safeTransfer(address(token), guarantor, prefundTokenAmount - actualTokenNeeded - penalty);
+                emit UserOperationSponsored(userOpHash, sender, guarantor, actualTokenNeeded + penalty, tokenPrice, true);
             }
         } else {
             uint256 actualTokenNeeded = Math.mulDiv(
@@ -233,8 +241,15 @@ contract ERC20PaymasterV07 is BaseERC20Paymaster, IPaymaster {
                 Math.Rounding.Ceil
             );
 
-            SafeTransferLib.safeTransfer(address(token), sender, prefundTokenAmount - actualTokenNeeded);
-            emit UserOperationSponsored(userOpHash, sender, address(0), actualTokenNeeded, tokenPrice, false);
+            uint256 penalty = Math.mulDiv(
+                prefundTokenAmount - actualTokenNeeded,
+                110,
+                100,
+                Math.Rounding.Ceil
+            );
+
+            SafeTransferLib.safeTransfer(address(token), sender, prefundTokenAmount - actualTokenNeeded - penalty);
+            emit UserOperationSponsored(userOpHash, sender, address(0), actualTokenNeeded + penalty, tokenPrice, false);
         }
     }
 
