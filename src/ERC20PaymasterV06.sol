@@ -136,17 +136,19 @@ contract ERC20PaymasterV06 is BaseERC20Paymaster, IPaymaster {
             }
 
             address guarantor = address(bytes20(paymasterConfig[0:20]));
+            uint48 validUntil = uint48(bytes6(paymasterConfig[20:26]));
+            uint48 validAfter = uint48(bytes6(paymasterConfig[26:32]));
 
             bool signatureValid = SignatureChecker.isValidSignatureNow(
                 guarantor,
-                getHash(userOp, uint48(bytes6(paymasterConfig[20:26])), uint48(bytes6(paymasterConfig[26:32])), type(uint256).max),
+                getHash(userOp, validUntil, validAfter, type(uint256).max),
                 paymasterConfig[32:]
             );
 
             SafeTransferLib.safeTransferFrom(address(token), guarantor, address(this), tokenAmount);
             context = abi.encodePacked(tokenAmount, tokenPrice, userOp.sender, userOpHash, getUserOpGasPrice(userOp), guarantor);
             validationResult = _packValidationData(
-                !signatureValid, uint48(bytes6(paymasterConfig[20:26])), uint48(bytes6(paymasterConfig[26:32]))
+                !signatureValid, validUntil, validAfter
             );
         } else {
             if (paymasterConfig.length < 64) {
@@ -163,12 +165,15 @@ contract ERC20PaymasterV06 is BaseERC20Paymaster, IPaymaster {
                 revert TokenAmountTooHigh();
             }
 
+            uint48 validUntil = uint48(bytes6(paymasterConfig[52:58]));
+            uint48 validAfter = uint48(bytes6(paymasterConfig[58:64]));
+
             bool signatureValid = SignatureChecker.isValidSignatureNow(
                 guarantor,
                 getHash(
                     userOp,
-                    uint48(bytes6(paymasterConfig[52:58])),
-                    uint48(bytes6(paymasterConfig[58:64])),
+                    validUntil,
+                    validAfter,
                     tokenLimit
                 ),
                 paymasterConfig[64:]
@@ -177,7 +182,7 @@ contract ERC20PaymasterV06 is BaseERC20Paymaster, IPaymaster {
             SafeTransferLib.safeTransferFrom(address(token), guarantor, address(this), tokenAmount);
             context = abi.encodePacked(tokenAmount, tokenPrice, userOp.sender, userOpHash, getUserOpGasPrice(userOp), guarantor);
             validationResult = _packValidationData(
-                !signatureValid, uint48(bytes6(paymasterConfig[52:58])), uint48(bytes6(paymasterConfig[58:64]))
+                !signatureValid, validUntil, validAfter
             );
         }
     }

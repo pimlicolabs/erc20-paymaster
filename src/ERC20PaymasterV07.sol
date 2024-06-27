@@ -126,10 +126,13 @@ contract ERC20PaymasterV07 is BaseERC20Paymaster, IPaymaster {
             if (paymasterConfig.length != 32) {
                 revert PaymasterDataLengthInvalid();
             }
-            if (uint256(bytes32(paymasterConfig[0:32])) == 0) {
+
+            uint256 tokenLimit = uint256(bytes32(paymasterConfig[0:32]));
+
+            if (tokenLimit == 0) {
                 revert TokenLimitZero();
             }
-            if (tokenAmount > uint256(bytes32(paymasterConfig[0:32]))) {
+            if (tokenAmount > tokenLimit) {
                 revert TokenAmountTooHigh();
             }
             SafeTransferLib.safeTransferFrom(address(token), userOp.sender, address(this), tokenAmount);
@@ -142,16 +145,19 @@ contract ERC20PaymasterV07 is BaseERC20Paymaster, IPaymaster {
 
             address guarantor = address(bytes20(paymasterConfig[0:20]));
 
+            uint48 validUntil = uint48(bytes6(paymasterConfig[20:26]));
+            uint48 validAfter = uint48(bytes6(paymasterConfig[26:32]));
+
             bool signatureValid = SignatureChecker.isValidSignatureNow(
                 guarantor,
-                getHash(userOp, uint48(bytes6(paymasterConfig[20:26])), uint48(bytes6(paymasterConfig[26:32])), 0),
+                getHash(userOp, validUntil, validAfter, 0),
                 paymasterConfig[32:]
             );
 
             SafeTransferLib.safeTransferFrom(address(token), guarantor, address(this), tokenAmount);
             context = abi.encodePacked(tokenAmount, tokenPrice, userOp.sender, userOpHash, guarantor);
             validationResult = _packValidationData(
-                !signatureValid, uint48(bytes6(paymasterConfig[20:26])), uint48(bytes6(paymasterConfig[26:32]))
+                !signatureValid, validUntil, validAfter
             );
         } else {
             if (paymasterConfig.length < 64) {
@@ -159,21 +165,25 @@ contract ERC20PaymasterV07 is BaseERC20Paymaster, IPaymaster {
             }
 
             address guarantor = address(bytes20(paymasterConfig[32:52]));
+            uint256 tokenLimit = uint256(bytes32(paymasterConfig[0:32]));
 
-            if (uint256(bytes32(paymasterConfig[0:32])) == 0) {
+            if (tokenLimit == 0) {
                 revert TokenLimitZero();
             }
-            if (tokenAmount > uint256(bytes32(paymasterConfig[0:32]))) {
+            if (tokenAmount > tokenLimit) {
                 revert TokenAmountTooHigh();
             }
+
+            uint48 validUntil = uint48(bytes6(paymasterConfig[52:58]));
+            uint48 validAfter = uint48(bytes6(paymasterConfig[58:64]));
 
             bool signatureValid = SignatureChecker.isValidSignatureNow(
                 guarantor,
                 getHash(
                     userOp,
-                    uint48(bytes6(paymasterConfig[52:58])),
-                    uint48(bytes6(paymasterConfig[58:64])),
-                    uint256(bytes32(paymasterConfig[0:32]))
+                    validUntil,
+                    validAfter,
+                    tokenLimit
                 ),
                 paymasterConfig[64:]
             );
@@ -181,7 +191,7 @@ contract ERC20PaymasterV07 is BaseERC20Paymaster, IPaymaster {
             SafeTransferLib.safeTransferFrom(address(token), guarantor, address(this), tokenAmount);
             context = abi.encodePacked(tokenAmount, tokenPrice, userOp.sender, userOpHash, guarantor);
             validationResult = _packValidationData(
-                !signatureValid, uint48(bytes6(paymasterConfig[52:58])), uint48(bytes6(paymasterConfig[58:64]))
+                !signatureValid, validUntil, validAfter
             );
         }
     }
