@@ -303,7 +303,7 @@ contract ERC20Paymaster18Test is Test {
         uint48 validUntil = 0;
         uint48 validAfter = 0;
 
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(guarantorKey, paymaster.getHash(op, validUntil, validAfter, 0));
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(guarantorKey, paymaster.getHash(op, validUntil, validAfter, type(uint256).max));
         bytes memory guarantorSig = abi.encodePacked(r, s, v);
 
         op.paymasterAndData = abi.encodePacked(
@@ -393,7 +393,7 @@ contract ERC20Paymaster18Test is Test {
         uint48 validUntil = 0;
         uint48 validAfter = 0;
 
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(guarantorKey, paymaster.getHash(op, validUntil, validAfter, 0));
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(guarantorKey, paymaster.getHash(op, validUntil, validAfter, type(uint256).max));
         bytes memory guarantorSig = abi.encodePacked(r, s, v);
 
         op.paymasterAndData = abi.encodePacked(
