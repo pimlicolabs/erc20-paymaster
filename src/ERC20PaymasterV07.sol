@@ -216,7 +216,7 @@ contract ERC20PaymasterV07 is BaseERC20Paymaster, IPaymaster {
 
             uint256 penalty = Math.mulDiv(
                 prefundTokenAmount - actualTokenNeeded,
-                110,
+                10,
                 100,
                 Math.Rounding.Ceil
             );
