@@ -9,3 +9,20 @@ optimizer = true
 optimizer_runs = 1000000
 gas_price = 1000000000
 ast = true
+
+remappings = [
+    "@account-abstraction/=lib/account-abstraction/",
+    "@openzeppelin/contracts/=lib/openzeppelin-contracts-v5.0.0/contracts/",
+    "account-abstraction-v6/=lib/account-abstraction-v6/contracts/",
+    "account-abstraction-v7/=lib/account-abstraction-v7/contracts/",
+    "account-abstraction/=lib/account-abstraction/contracts/",
+    "ds-test/=lib/forge-std/lib/ds-test/src/",
+    "erc4626-tests/=lib/openzeppelin-contracts-v5.0.0/lib/erc4626-tests/",
+    "forge-std/=lib/forge-std/src/",
+    "halmos-cheatcodes/=lib/halmos-cheatcodes/src/",
+    "openzeppelin-contracts-v4.8.0/=lib/openzeppelin-contracts-v4.8.0/",
+    "openzeppelin-contracts-v5.0.0/=lib/openzeppelin-contracts-v5.0.0/",
+    "openzeppelin-contracts/=lib/openzeppelin-contracts/",
+    "v3-core/=lib/v3-core/contracts/",
+    "v3-periphery/=lib/v3-periphery/contracts/"
+]
