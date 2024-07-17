@@ -20,7 +20,7 @@ The ERC-20 paymaster supports:
 
 ## Usage
 
-This paymaster has four modes. It allows the user to be simply made to pay themselves, but also allows the selection of a guarnator who can front the ERC-20 token fees during validation, allowing the user to approve tokens to the paymaster or fetch / claim tokens if they do not already have any. For each mode, it is possible to set a ERC-20 token spend limit to protect against sudden price fluctuations or oracle manipulation.  
+This paymaster has four modes. It allows the user to be simply made to pay themselves, but also allows the selection of a guarantor who can front the ERC-20 token fees during validation, allowing the user to approve tokens to the paymaster or fetch / claim tokens if they do not already have any. For each mode, it is possible to set a ERC-20 token spend limit to protect against sudden price fluctuations or oracle manipulation.  
 
 Mode 0:
 - The user (sender) pays for gas fees with the ERC-20 token.
@@ -28,7 +28,7 @@ Mode 0:
 
 Mode 1:
 - The user (sender) pays for gas fees with the ERC-20 token, 
-- There is a limit to the amount of ERC-20 tokens that can be taken from the user for the user opertion.
+- There is a limit to the amount of ERC-20 tokens that can be taken from the user for the user operation.
 - `paymasterData`: "0x01" + token spend limit (32 bytes)
 
 Mode 2:
@@ -37,7 +37,7 @@ Mode 2:
 
 Mode 3:
 - A guarantor fronts the ERC-20 token gas fees during validation, and expects the user to be able to pay the actual cost during the postOp phase and get refunded. Otherwise the guarantor is liable.
-- There is a limit to the amount of ERC-20 tokens that can be taken from the user/guarantor for the user opertion.
+- There is a limit to the amount of ERC-20 tokens that can be taken from the user/guarantor for the user operation.
 - `paymasterData`: "0x03" + token spend limit (32 bytes) + guarantor address (20 bytes) + validUntil (6 bytes) + validAfter (6 bytes) + guarantor signature (dynamic bytes)
 
 ## Development
