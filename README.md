@@ -1,5 +1,7 @@
 # `ERC20Paymaster` contract
 
+> **⚠️ DEPRECATION NOTICE ⚠️**: This implementation is deprecated and no longer maintained. The new ERC-20 paymaster implementation is available at [pimlicolabs/singleton-paymaster](https://github.com/pimlicolabs/singleton-paymaster).
+
 ## Overview
 
 This repository contains an ERC-4337 paymaster implementation allowing users to pay for gas fees with ERC-20 tokens, leveraging an oracle to fetch latest prices. The contract takes the max fee during the paymaster validation step, and refunds excess tokens if the actual gas cost is lower than the initially provided amount. It also allows updating price configuration and withdrawing tokens by the contract owner.
@@ -20,14 +22,14 @@ The ERC-20 paymaster supports:
 
 ## Usage
 
-This paymaster has four modes. It allows the user to be simply made to pay themselves, but also allows the selection of a guarnator who can front the ERC-20 token fees during validation, allowing the user to approve tokens to the paymaster or fetch / claim tokens if they do not already have any. For each mode, it is possible to set a ERC-20 token spend limit to protect against sudden price fluctuations or oracle manipulation.  
+This paymaster has four modes. It allows the user to be simply made to pay themselves, but also allows the selection of a guarnator who can front the ERC-20 token fees during validation, allowing the user to approve tokens to the paymaster or fetch / claim tokens if they do not already have any. For each mode, it is possible to set a ERC-20 token spend limit to protect against sudden price fluctuations or oracle manipulation.
 
 Mode 0:
 - The user (sender) pays for gas fees with the ERC-20 token.
 - `paymasterData` is empty
 
 Mode 1:
-- The user (sender) pays for gas fees with the ERC-20 token, 
+- The user (sender) pays for gas fees with the ERC-20 token,
 - There is a limit to the amount of ERC-20 tokens that can be taken from the user for the user opertion.
 - `paymasterData`: "0x01" + token spend limit (32 bytes)
 
@@ -69,7 +71,7 @@ forge test
 
 4. run coverage
 ```shell
-forge coverage --ir-minimum 
+forge coverage --ir-minimum
 ```
 
 ### Oracles
