@@ -1,6 +1,6 @@
-> **⚠️ DEPRECATION NOTICE ⚠️**: This implementation is deprecated and no longer maintained. The new ERC-20 paymaster implementation is available at [pimlicolabs/singleton-paymaster](https://github.com/pimlicolabs/singleton-paymaster).
-
 # `ERC20Paymaster` contract
+
+> **⚠️ DEPRECATION NOTICE ⚠️**: This implementation is deprecated and no longer maintained. The new ERC-20 paymaster implementation is available at [pimlicolabs/singleton-paymaster](https://github.com/pimlicolabs/singleton-paymaster).
 
 ## Overview
 
